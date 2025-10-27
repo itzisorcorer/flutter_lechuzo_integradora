@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../Ambiente/ambiente.dart';
 import '../services/auth_services.dart';
-import 'home_screen.dart'; // Crearemos esta pantalla después
+import 'home_screen.dart';
+
+import 'package:flutter_lechuzo_integradora/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -90,6 +92,15 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _handleLogin,
               child: const Text('Entrar'),
             ),
+            TextButton(
+                onPressed: (){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                  );
+                },
+                child: const Text('¿No tienes cuenta? Registrate'),
+            )
           ],
         ),
       ),
