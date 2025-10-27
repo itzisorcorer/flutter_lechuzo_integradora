@@ -10,6 +10,8 @@ class Ambiente {
 
   static int idUsuario = 0;
   static String nombreUsuario = '';
+
+
   static String token = '';
   static String rol = '';
 }
