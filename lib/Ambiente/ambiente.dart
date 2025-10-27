@@ -9,6 +9,8 @@ class Ambiente {
   // static String urlServer = 'https://pruebarailway-production-6249.up.railway.app';
 
   static int idUsuario = 0;
+
+
   static String nombreUsuario = '';
 
 
