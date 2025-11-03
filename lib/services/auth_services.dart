@@ -70,7 +70,7 @@ class AuthService {
     if(role == 'vendedor' || role == 'modulo'){
       body['nombre_tienda'] = nombreTienda;
 
-    }if (role == 'estudiante'){
+    }else if (role == 'estudiante'){
       body['nombre_completo'] = nombreCompleto;
     }
 
