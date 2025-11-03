@@ -1,12 +1,10 @@
-// lib/ambiente.dart
-
 class Ambiente {
 
 
-  static String urlServer = 'http://10.235.105.91:8000'; // <-- CAMBIA ESTA IP, aki debe ir la del telefono cuando compartes internet via usb
+  static String urlServer = 'http://192.168.56.1:8000'; // <-- CAMBIA ESTA IP, aki debe ir la del telefono cuando compartes internet via usb
 
-  // Cuando lo subas a Railway, comentas la de arriba y descomentas esta:
-  // static String urlServer = 'https://pruebarailway-production-6249.up.railway.app';
+  // pa cuando subamos a railway:
+  // static String urlServer = '';
 
   static int idUsuario = 0;
 

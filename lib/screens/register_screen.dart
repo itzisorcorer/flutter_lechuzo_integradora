@@ -24,7 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nombreCompletoController = TextEditingController();
 
   // Variable para el Dropdown
-  String _selectedRole = 'vendedor'; // Valor por defecto
+  String _selectedRole = 'estudiante'; // Valor por defecto
 
   @override
   void dispose() {
@@ -90,8 +90,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedRole,
                 items: const [
-                  DropdownMenuItem(value: 'vendedor', child: Text('Soy Vendedor')),
-                  DropdownMenuItem(value: 'estudiante', child: Text('Soy Estudiante')),
+                  // Texto: "Lo que ve el usuario", value: "Lo que se envía a la API"
+                  DropdownMenuItem(value: 'vendedor', child: Text('Soy Vendedor (Externo)')),
+                  DropdownMenuItem(value: 'modulo', child: Text('Soy Módulo (Kiosco U.)')),
+                  DropdownMenuItem(value: 'estudiante', child: Text('Soy Estudiante (Comprador)')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -124,11 +126,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- CAMPO CONDICIONAL: VENDEDOR ---
-              if (_selectedRole == 'vendedor')
+              // --- CAMPO CONDICIONAL: VENDEDOR O MODULO ---
+              if (_selectedRole == 'vendedor' || _selectedRole == 'modulo')
                 TextField(
                   controller: _nombreTiendaController,
-                  decoration: const InputDecoration(labelText: 'Nombre de la Tienda'),
+                  decoration: const InputDecoration(labelText: 'Nombre de la Tienda / Servicio'),
                 ),
 
               // --- CAMPO CONDICIONAL: ESTUDIANTE ---

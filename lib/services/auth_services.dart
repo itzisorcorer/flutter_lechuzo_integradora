@@ -67,10 +67,10 @@ class AuthService {
       'role' : role,
     };
       //añadimos los campos condicionales
-    if(role == 'vendedor'){
+    if(role == 'vendedor' || role == 'modulo'){
       body['nombre_tienda'] = nombreTienda;
 
-    }else if (role == 'estudiante'){
+    }if (role == 'estudiante'){
       body['nombre_completo'] = nombreCompleto;
     }
 
