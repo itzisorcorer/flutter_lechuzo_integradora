@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:flutter_lechuzo_integradora/Modelos/ProgramaEducativoModel.dart';
+
 import '../Ambiente/ambiente.dart';
 import '../Modelos/LoginModel.dart';
 
@@ -56,17 +58,23 @@ class AuthService {
     required String role,
     required String nombreTienda,  // para los vendedores
     required String nombreCompleto, // para los estudiantes
+    required String matricula,
+    required int programaEducativoId,
 }) async {
     final url = Uri.parse('${Ambiente.urlServer}/api/register');
 
     //construimos el cuerpo del envio del json
-    Map<String, String> body = {
+    Map<String, dynamic> body = {
       'email' : email,
       'password' : password,
       'password_confirmation' : passwordConfirmation,
       'role' : role,
+
+      'matricula' : matricula,
+      'programa_educativo_id' : programaEducativoId,
     };
       //añadimos los campos condicionales
+
     if(role == 'vendedor' || role == 'modulo'){
       body['nombre_tienda'] = nombreTienda;
 
@@ -107,5 +115,24 @@ class AuthService {
         throw Exception(errorMessage);
       }
     }
+    //funcion para la matricula
+    Future<List<ProgramaEducativoModel>> getProgramas() async {
+      final url = Uri.parse('${Ambiente.urlServer}/api/programas-educativos');
+
+      final response = await http.get(
+        url,
+        headers: {'Accept': 'application/json'},
+
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((json) => ProgramaEducativoModel.fromJson(json))
+            .toList();
+      } else {
+        throw Exception('Error al obtener los programas educativos');
+      }
+    }
 }
+
 

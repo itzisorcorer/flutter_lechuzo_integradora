@@ -5,6 +5,8 @@ import '../Ambiente/ambiente.dart';
 import '../services/auth_services.dart';
 import 'home_screen.dart';
 
+import 'package:flutter_lechuzo_integradora/Modelos/ProgramaEducativoModel.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -22,9 +24,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordConfirmController = TextEditingController();
   final _nombreTiendaController = TextEditingController();
   final _nombreCompletoController = TextEditingController();
+  final _matriculaController = TextEditingController();
 
   // Variable para el Dropdown
   String _selectedRole = 'estudiante'; // Valor por defecto
+  late Future<List<ProgramaEducativoModel>> _programasFuture;
+  int? _selectedProgramaId; // aki se guarda el id del programa
+
+  @override
+  void initState() {
+    super.initState();
+    _programasFuture = _authService.getProgramas();
+  }
+
 
   @override
   void dispose() {
@@ -38,6 +50,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _handleRegister() async {
     if (_isLoading) return;
+
+    //validar un programa seleccionado
+    if(_selectedProgramaId == null){
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Por favor seleccione un programa educativo'), backgroundColor: Colors.red),
+      );
+      return;
+
+    }
     setState(() { _isLoading = true; });
 
     try {
@@ -48,6 +68,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         role: _selectedRole,
         nombreTienda: _nombreTiendaController.text,
         nombreCompleto: _nombreCompletoController.text,
+        matricula: _matriculaController.text,
+        programaEducativoId: _selectedProgramaId!,
       );
 
       // --- ¡ÉXITO! ---
@@ -125,6 +147,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
               ),
               const SizedBox(height: 16),
+
+              //dropdown de los programas educativos
+              FutureBuilder<List<ProgramaEducativoModel>>(
+                  future: _programasFuture,
+                  builder: (context, snapshot){
+                    if(snapshot.connectionState == ConnectionState.waiting){
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if(snapshot.hasError || !snapshot.hasData){
+                      return const Text('Error al cargar los programas', style: TextStyle(color: Colors.red));
+                    }
+                    return DropdownButtonFormField<int>(
+                        value: _selectedProgramaId,
+                        hint: const Text('Selecciona tu programa educativo'),
+                        isExpanded: true,
+                        items: snapshot.data!.map((programa){
+                          return DropdownMenuItem<int>(
+                              value: programa.id,
+                              child: Text(programa.nombre),
+                          );
+                        }).toList(),
+                        onChanged: (value){
+                          setState((){_selectedProgramaId = value; });
+                        },
+                    );
+                  },
+              ),
+              const SizedBox(height: 16),
+
+
+              //TextField de la matricula
+              TextField(
+                controller: _matriculaController,
+                decoration: const InputDecoration(labelText: 'Matrícula (10 dígitos)'),
+                keyboardType: TextInputType.number,
+                maxLength: 10,
+              ),
+              const SizedBox(height: 16),
+
 
               // --- CAMPO CONDICIONAL: VENDEDOR O MODULO ---
               if (_selectedRole == 'vendedor' || _selectedRole == 'modulo')
