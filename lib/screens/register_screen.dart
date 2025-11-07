@@ -6,6 +6,8 @@ import '../services/auth_services.dart';
 import 'home_screen.dart';
 
 import 'package:flutter_lechuzo_integradora/Modelos/ProgramaEducativoModel.dart';
+import 'package:flutter_lechuzo_integradora/screens/vendedor_home_screen.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -80,10 +82,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Ambiente.nombreUsuario = response.userName;
 
       // Navegamos a la pantalla principal
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      if (Ambiente.rol == 'vendedor' || Ambiente.rol == 'modulo') {
+        // Es un vendedor, vamos a su dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const VendedorHomeScreen()),
+        );
+      } else {
+        // Es un estudiante (o admin), vamos al catálogo de productos
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
 
     } catch (e) {
       // --- ERROR ---

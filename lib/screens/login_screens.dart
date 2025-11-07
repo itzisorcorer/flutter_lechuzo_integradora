@@ -8,6 +8,7 @@ import '../services/auth_services.dart';
 import 'home_screen.dart';
 
 import 'package:flutter_lechuzo_integradora/screens/register_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/vendedor_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -47,11 +48,20 @@ class _LoginScreenState extends State<LoginScreen> {
       Ambiente.rol = response.userRole;
       Ambiente.nombreUsuario = response.userName;
 
-      // Navegamos a la pantalla principal
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      // Revisamos el rol que guardamos en Ambiente
+      if (Ambiente.rol == 'vendedor' || Ambiente.rol == 'modulo') {
+        // Es un vendedor, vamos a su dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const VendedorHomeScreen()),
+        );
+      } else {
+        // Es un estudiante (o admin), vamos al catálogo de productos
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
 
     } catch (e) {
       // --- ERROR ---
