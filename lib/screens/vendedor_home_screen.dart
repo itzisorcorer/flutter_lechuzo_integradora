@@ -1,38 +1,103 @@
 // lib/screens/vendedor_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
+import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
 
-class VendedorHomeScreen extends StatelessWidget {
+import '../Modelos/ProductoModel.dart';
+
+class VendedorHomeScreen extends StatefulWidget {
   const VendedorHomeScreen({super.key});
+
+  @override
+  State<VendedorHomeScreen> createState() => _VendedorHomeScreenState();
+}
+
+class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
+  final ProductoService _productoService = ProductoService();
+  List<ProductoModel> _misProductos = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  //llamada de la api
+  @override
+  void initState() {
+    super.initState();
+    _fetchMisProductos();
+  }
+
+  Future<void> _fetchMisProductos() async {
+    try {
+      final response = await _productoService.getMisProductos();
+      setState(() {
+        _misProductos = response.productos;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceFirst("Exception: ", "");
+        _isLoading = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Dashboard de ${Ambiente.nombreUsuario}'),
+        // TODO:
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('¡Bienvenido Vendedor!'),
-            Text('Tu rol es: ${Ambiente.rol}'),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Aquí iría la lógica para ver "Mis Productos"
-              },
-              child: const Text('Mis Productos'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Aquí iría la lógica para "Ver Ventas"
-              },
-              child: const Text('Ver Ventas'),
-            ),
-          ],
-        ),
+      body: _buildProductList(),
+      floatingActionButton: FloatingActionButton(
+          onPressed: (){
+            //TODO: Navegar a la pantalla crear producto
+            print('Ir a crear producto');
+
+          },
+        tooltip: 'Añadir producto',
+        child: const Icon(Icons.add),
       ),
     );
   }
+  //widget de apoyo para mostrar la lista
+Widget _buildProductList(){
+    if(_isLoading){
+      return const Center(child: CircularProgressIndicator());
+    }
+    if(_errorMessage != null){
+      return Center(
+        child: Text(
+          'Error al cargar: $_errorMessage',
+          style: const TextStyle(color: Colors.red),
+        ),
+
+      );
+    }
+    if (_misProductos.isEmpty){
+      return const Center(child: Text('No has publicado ningún producto todavía'));
+    }
+    //mostramos la lista de productos
+  return ListView.builder(
+    itemCount: _misProductos.length,
+    itemBuilder: (context, index){
+      final producto = _misProductos[index];
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: ListTile(
+          title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(producto.categoria.nombre),
+          leading: CircleAvatar(
+            child: Text('\$${producto.precio.toStringAsFixed(0)}'),
+          ),
+          trailing: const Icon(Icons.edit, color: Colors.blue),
+          onTap: (){
+            //TODO: Navegar a la pantalla de editar producto
+            print('Editar producto ID: ${producto.id}');
+          },
+        ),
+      );
+    }
+  );
+}
 }

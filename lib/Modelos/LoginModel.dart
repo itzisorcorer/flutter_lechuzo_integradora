@@ -18,8 +18,9 @@ class LoginResponse {
 
     String tempName = 'N/A';
     if (json['user'] != null) {
-      if (json['user']['role'] == 'vendedor' && json['user']['vendedor'] != null) {
+      if ((json['user']['role'] == 'vendedor' || json['user']['role'] == 'modulo') && json['user']['vendedor'] != null) {
         tempName = json['user']['vendedor']['nombre_tienda'];
+
       } else if (json['user']['role'] == 'estudiante' && json['user']['estudiante'] != null) {
         tempName = json['user']['estudiante']['nombre_completo'];
       }
