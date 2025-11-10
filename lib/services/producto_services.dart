@@ -146,4 +146,25 @@ Future<PaginatedProductosResponse> getMisProductos() async{
 
 
   }
+  Future<void> deleteProducto(int productoId) async{
+    final token = Ambiente.token;
+
+    final url = Uri.parse('${Ambiente.urlServer}/api/productos/$productoId');
+    final response = await http.delete(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+
+    );
+    if(response.statusCode == 200){
+      return;
+
+    }else{
+      throw Exception('Error al eliminar el producto: ${response.body}');
+    }
+
+  }
+
 }
