@@ -9,6 +9,8 @@ import 'home_screen.dart';
 
 import 'package:flutter_lechuzo_integradora/screens/register_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/vendedor_home_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/estudiante_main_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/vendedor_main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,13 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
         // Es un vendedor, vamos a su dashboard
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const VendedorHomeScreen()),
+          MaterialPageRoute(builder: (context) => const VendedorMainScreen()),
         );
       } else {
         // Es un estudiante (o admin), vamos al catálogo de productos
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const EstudianteMainScreen()),
         );
       }
 
