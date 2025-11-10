@@ -4,6 +4,7 @@ import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
+import 'package:flutter_lechuzo_integradora/screens/editar_producto_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

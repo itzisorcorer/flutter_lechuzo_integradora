@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
+import 'package:flutter_lechuzo_integradora/screens/crear_producto_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/editar_producto_screen.dart';
 
 import '../Modelos/ProductoModel.dart';
 
@@ -50,13 +52,23 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
       ),
       body: _buildProductList(),
       floatingActionButton: FloatingActionButton(
-          onPressed: (){
-            //TODO: Navegar a la pantalla crear producto
-            print('Ir a crear producto');
-
-          },
+        onPressed: () async {
+          final resultado = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CrearProductoScreen()
+          ),
+          );
+          if (resultado == true){
+            setState(() {
+              _isLoading = true;
+              _errorMessage = null;
+            });
+            _fetchMisProductos();
+            
+          }
+        },
         tooltip: 'Añadir producto',
         child: const Icon(Icons.add),
+
+
       ),
     );
   }
@@ -91,9 +103,19 @@ Widget _buildProductList(){
             child: Text('\$${producto.precio.toStringAsFixed(0)}'),
           ),
           trailing: const Icon(Icons.edit, color: Colors.blue),
-          onTap: (){
-            //TODO: Navegar a la pantalla de editar producto
-            print('Editar producto ID: ${producto.id}');
+          onTap: () async {
+            final resultado = await Navigator.push(context, MaterialPageRoute(builder: (context) => EditarProductoScreen(producto: producto),
+              ),
+            );
+            if(resultado == true){
+              setState(() {
+                _isLoading = true;
+                _errorMessage = null;
+              });
+              _fetchMisProductos();
+
+            }
+
           },
         ),
       );
