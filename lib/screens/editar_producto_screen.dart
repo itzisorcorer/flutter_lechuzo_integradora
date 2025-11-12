@@ -1,10 +1,12 @@
 // lib/screens/editar_producto_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditarProductoScreen extends StatefulWidget {
-  // --- ¡LA CLAVE! ---
   // Recibimos el producto que vamos a editar
   final ProductoModel producto;
 
@@ -18,36 +20,40 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   final _formKey = GlobalKey<FormState>();
   final _productoService = ProductoService();
 
-  // Controladores para los campos
+  // Controladores
   final _nombreController = TextEditingController();
   final _descripcionController = TextEditingController();
   final _precioController = TextEditingController();
   final _cantidadController = TextEditingController();
 
-  // Para manejar el dropdown
+  // Dropdown
   late Future<List<CategoriaModel>> _categoriasFuture;
   int? _selectedCategoriaId;
   bool _isLoading = false;
+
+  // Estado de la Imagen
+  File? _imagenNueva; // La foto que el usuario acaba de tomar/elegir
+  String? _imagenUrlExistente; // La foto que ya estaba en el servidor
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
 
-    // --- ¡AQUÍ ESTÁ LA MAGIA! ---
-    // Pre-llenamos el formulario con los datos del producto
+    //Pre-llenamos el formulario con los datos del producto
     _nombreController.text = widget.producto.nombre;
     _descripcionController.text = widget.producto.descripcion ?? '';
     _precioController.text = widget.producto.precio.toStringAsFixed(2);
     _cantidadController.text = widget.producto.cantidadDisponible.toString();
-    _selectedCategoriaId = widget.producto.categoria.id; // Pre-selecciona la categoría
+    _selectedCategoriaId = widget.producto.categoria.id;
+    _imagenUrlExistente = widget.producto.urlImagen; // Guardamos la URL de la foto vieja
 
-    // Cargamos las categorías (igual que en "Crear")
+    // Cargamos las categorías
     _categoriasFuture = _productoService.getCategorias();
   }
 
   @override
   void dispose() {
-    // Limpiamos los controllers
     _nombreController.dispose();
     _descripcionController.dispose();
     _precioController.dispose();
@@ -55,39 +61,41 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     super.dispose();
   }
 
-  // --- Lógica para guardar ---
+
+  Future<void> _seleccionarImagen() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imagenNueva = File(pickedFile.path);
+      });
+    }
+  }
+
+  //Lógica para ACTUALIZAR
   Future<void> _handleActualizar() async {
     if (!_formKey.currentState!.validate() || _selectedCategoriaId == null) {
-      return; // Si hay errores, no hace nada
+      return;
     }
-
     setState(() { _isLoading = true; });
 
-    // 1. Creamos un 'Map' solo con los datos que queremos enviar
-    final Map<String, dynamic> datosActualizados = {
-      'nombre': _nombreController.text,
-      'descripcion': _descripcionController.text,
-      'precio': double.parse(_precioController.text),
-      'categoria_id': _selectedCategoriaId!,
-      'cantidad_disponible': int.parse(_cantidadController.text),
-    };
-
     try {
-      // 2. Llamamos a la nueva función 'updateProducto' del servicio
+      //Llamamos a la función 'updateProducto'
       await _productoService.updateProducto(
-        widget.producto.id, // Pasamos el ID del producto
-        datosActualizados,   // Pasamos los datos del formulario
+        productoId: widget.producto.id,
+        nombre: _nombreController.text,
+        descripcion: _descripcionController.text,
+        precio: double.parse(_precioController.text),
+        categoriaId: _selectedCategoriaId!,
+        cantidad: int.parse(_cantidadController.text),
+        imagenNueva: _imagenNueva,
       );
 
-      // 3. ¡Éxito!
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Producto actualizado!'), backgroundColor: Colors.green),
       );
-      // Regresamos a la pantalla anterior (VendedorHomeScreen)
-      Navigator.pop(context, true); // Enviamos 'true' para indicar que refresque
+      Navigator.pop(context, true);
 
     } catch (e) {
-      // 4. Error
       setState(() { _isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
@@ -103,18 +111,37 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView( // (El formulario es idéntico al de Crear)
+        child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // --- Campo Nombre ---
-            TextFormField(
-              controller: _nombreController,
-              decoration: const InputDecoration(labelText: 'Nombre del Producto'),
-              validator: (value) { /* ... (validador igual) ... */ return null; },
+
+            // --- 7. Widget de Imagen
+            InkWell(
+              onTap: _seleccionarImagen,
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[400]!),
+                ),
+                child: _buildImagePreview(),
+              ),
             ),
             const SizedBox(height: 16),
 
-            // --- Dropdown de Categorías ---
+
+            TextFormField(
+              controller: _nombreController,
+              decoration: const InputDecoration(labelText: 'Nombre del Producto'),
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'El nombre es obligatorio';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
             FutureBuilder<List<CategoriaModel>>(
               future: _categoriasFuture,
               builder: (context, snapshot) {
@@ -125,43 +152,51 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                   return const Text('Error al cargar categorías', style: TextStyle(color: Colors.red));
                 }
                 return DropdownButtonFormField<int>(
-                  value: _selectedCategoriaId, // ¡Ya viene pre-seleccionado!
+                  value: _selectedCategoriaId,
                   isExpanded: true,
                   hint: const Text('Selecciona una categoría'),
                   items: snapshot.data!.map((categoria) {
                     return DropdownMenuItem<int>(
                       value: categoria.id,
-                      child: Text(categoria.nombre),
+                      child: Text(categoria.nombre, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: (value) {
                     setState(() { _selectedCategoriaId = value; });
                   },
-                  validator: (value) { /* ... (validador igual) ... */ return null; },
+                  validator: (value) {
+                    if (value == null) return 'Debes seleccionar una categoría';
+                    return null;
+                  },
                 );
               },
             ),
             const SizedBox(height: 16),
 
-            // --- Campo Precio ---
             TextFormField(
               controller: _precioController,
               decoration: const InputDecoration(labelText: 'Precio (Ej: 150.00)'),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) { /* ... (validador igual) ... */ return null; },
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'El precio es obligatorio';
+                if (double.tryParse(value) == null) return 'Ingresa un número válido';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
 
-            // --- Campo Cantidad ---
             TextFormField(
               controller: _cantidadController,
               decoration: const InputDecoration(labelText: 'Cantidad Disponible'),
               keyboardType: TextInputType.number,
-              validator: (value) { /* ... (validador igual) ... */ return null; },
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'La cantidad es obligatoria';
+                if (int.tryParse(value) == null) return 'Ingresa un número entero';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
 
-            // --- Campo Descripción ---
             TextFormField(
               controller: _descripcionController,
               decoration: const InputDecoration(labelText: 'Descripción (Opcional)'),
@@ -169,11 +204,10 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
             ),
             const SizedBox(height: 32),
 
-            // --- Botón de Guardar ---
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
-              onPressed: _handleActualizar, // Llama a la nueva función
+              onPressed: _handleActualizar, // Llama a la función de 'update'
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -183,5 +217,43 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         ),
       ),
     );
+  }
+
+  //Widget Ayudante para la Imagen
+  Widget _buildImagePreview() {
+    if (_imagenNueva != null) {
+      //Si el usuario seleccionó una FOTO NUEVA, la mostramos
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(_imagenNueva!, fit: BoxFit.cover),
+      );
+    } else if (_imagenUrlExistente != null) {
+      //Si NO hay foto nueva, pero SÍ había una foto VIEJA, la cargamos
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network( // <-- ¡Usamos Image.network!
+          Ambiente.urlServer + _imagenUrlExistente!,
+          fit: BoxFit.cover,
+          // Placeholder mientras carga
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          // Error si no puede cargar la URL
+          errorBuilder: (context, error, stack) {
+            return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
+          },
+        ),
+      );
+    } else {
+      //Si no hay ni nueva ni vieja, mostramos el placeholder
+      return const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.camera_alt, size: 50, color: Colors.grey),
+          Text('Toca para cambiar la imagen', style: TextStyle(color: Colors.grey)),
+        ],
+      );
+    }
   }
 }

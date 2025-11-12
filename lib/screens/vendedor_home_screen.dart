@@ -119,7 +119,8 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.blue),
                     onPressed: () async {
-                      // (Esta es la lógica que ya tenías)
+                      print('DEBUG: URL de la imagen: ${producto.urlImagen}' );
+
                       final resultado = await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -189,7 +190,7 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
 
 
 
-// --- 4. FUNCIÓN: LÓGICA DE BORRADO (CORREGIDA) ---
+// --- 4. FUNCIÓN: LÓGICA DE BORRADO ---
   Future<void> _ejecutarEliminacion(ProductoModel producto) async {
 
     setState(() {
@@ -202,10 +203,14 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
 
       await _fetchMisProductos();
 
-      // Mostramos un SnackBar de ÉXITO
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${producto.nombre}" eliminado correctamente.'), backgroundColor: Colors.green),
-      );
+      if(mounted) {
+        // Mostramos un SnackBar de ÉXITO
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('"${producto.nombre}" eliminado correctamente.'),
+              backgroundColor: Colors.green),
+        );
+      }
 
     } catch (e) {
       // 4. Error

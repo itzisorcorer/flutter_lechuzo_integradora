@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
+import 'dart:io';
+
 
 
 class ProductoService {
@@ -85,67 +87,122 @@ Future<PaginatedProductosResponse> getMisProductos() async{
       throw Exception('Error al cargar las categorías: ${response.body}');
     }
   }
+
   Future<ProductoModel> createProducto({
     required String nombre,
     required String descripcion,
     required double precio,
     required int categoriaId,
     required int cantidad,
-}) async{
+    File? imagen,
+  }) async {
+
     final token = Ambiente.token;
     final url = Uri.parse('${Ambiente.urlServer}/api/productos');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-type' : 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'nombre': nombre,
-        'descripcion': descripcion,
-        'precio': precio,
-        'categoria_id': categoriaId,
-        'cantidad_disponible': cantidad,
-        'disponible' : true
-      }),
+    // 1. Creamos un request de tipo 'multipart'
+    var request = http.MultipartRequest('POST', url);
 
-    );
-    if(response.statusCode == 201){ //201 = creado
+
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    });
+
+
+    request.fields['nombre'] = nombre;
+    request.fields['descripcion'] = descripcion;
+    request.fields['precio'] = precio.toString();
+    request.fields['categoria_id'] = categoriaId.toString();
+    request.fields['cantidad_disponible'] = cantidad.toString();
+    request.fields['disponible'] = 'true';
+
+
+    if (imagen != null) {
+      request.files.add(
+          await http.MultipartFile.fromPath(
+            'imagen', // Este es el 'name' que tu backend de Laravel espera
+            imagen.path,
+          )
+      );
+    }
+
+    // 5. Enviamos la petición
+    var streamedResponse = await request.send();
+
+    // 6. Obtenemos la respuesta
+    var response = await http.Response.fromStream(streamedResponse);
+
+    print('Respuesta de Crear Producto: ${response.statusCode}');
+    print('Cuerpo: ${response.body}');
+
+    if (response.statusCode == 201) { // 201 = Creado
+      // La API nos devuelve el producto recién creado
       return ProductoModel.fromJson(jsonDecode(response.body)['producto']);
-
-    }else{
+    } else {
       throw Exception('Error al crear el producto: ${response.body}');
     }
-
-
   }
-  Future<ProductoModel> updateProducto(
-      int productoId,
-      Map<String, dynamic> data,
-      ) async{
+
+  Future<ProductoModel> updateProducto({
+    required int productoId,
+    required String nombre,
+    required String descripcion,
+    required double precio,
+    required int categoriaId,
+    required int cantidad,
+    File? imagenNueva,
+  }) async {
     final token = Ambiente.token;
+
+
     final url = Uri.parse('${Ambiente.urlServer}/api/productos/$productoId');
-    final response = await http.put(
-      url,
-      headers: {
-        'Content-type' : 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-        'Authorization' : 'Bearer $token',
-      },
-      body: jsonEncode(data),
-    );
-    if(response.statusCode == 200){
-      return ProductoModel.fromJson(jsonDecode(response.body)['producto']);
 
-    }else{
-      throw Exception('Error al actualizar el producto: ${response.body}');
+    //Creamos un request de tipo 'multipart' (POST)
+    var request = http.MultipartRequest('POST', url);
 
+
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    });
+
+
+    // Le decimos a Laravel que esto es una petición 'PUT'
+    request.fields['_method'] = 'PUT';
+
+
+    request.fields['nombre'] = nombre;
+    request.fields['descripcion'] = descripcion;
+    request.fields['precio'] = precio.toString();
+    request.fields['categoria_id'] = categoriaId.toString();
+    request.fields['cantidad_disponible'] = cantidad.toString();
+
+
+    //Añadimos la NUEVA IMAGEN (si el usuario seleccionó una)
+    if (imagenNueva != null) {
+      request.files.add(
+          await http.MultipartFile.fromPath(
+            'imagen', // El 'name' que espera el backend
+            imagenNueva.path,
+          )
+      );
     }
 
+    //Enviamos y obtenemos la respuesta
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
 
+    print('Respuesta de Actualizar Producto: ${response.statusCode}');
+    print('Cuerpo: ${response.body}');
+
+    if (response.statusCode == 200) {
+      return ProductoModel.fromJson(jsonDecode(response.body)['producto']);
+    } else {
+      throw Exception('Error al actualizar el producto: ${response.body}');
+    }
   }
+
   Future<void> deleteProducto(int productoId) async{
     final token = Ambiente.token;
 
@@ -158,7 +215,7 @@ Future<PaginatedProductosResponse> getMisProductos() async{
       },
 
     );
-    if(response.statusCode == 200){
+    if(response.statusCode == 200 || response.statusCode == 204){
       return;
 
     }else{

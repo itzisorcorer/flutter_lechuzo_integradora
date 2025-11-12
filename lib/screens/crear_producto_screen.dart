@@ -1,7 +1,9 @@
 // lib/screens/crear_producto_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
+import 'package:image_picker/image_picker.dart'; // <-- Importa ImagePicker
 
 class CrearProductoScreen extends StatefulWidget {
   const CrearProductoScreen({super.key});
@@ -14,16 +16,20 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
   final _formKey = GlobalKey<FormState>();
   final _productoService = ProductoService();
 
-  // Controladores para los campos
+  // Controladores
   final _nombreController = TextEditingController();
   final _descripcionController = TextEditingController();
   final _precioController = TextEditingController();
   final _cantidadController = TextEditingController();
 
-  // Para manejar el dropdown
+  // Dropdown de Categorías
   late Future<List<CategoriaModel>> _categoriasFuture;
   int? _selectedCategoriaId;
   bool _isLoading = false;
+
+  // --- Estado para la imagen ---
+  File? _imagenSeleccionada;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -34,7 +40,6 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
 
   @override
   void dispose() {
-    // Limpiamos los controllers
     _nombreController.dispose();
     _descripcionController.dispose();
     _precioController.dispose();
@@ -42,39 +47,43 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
     super.dispose();
   }
 
-  // --- Lógica para guardar ---
+  // --- Función para seleccionar imagen ---
+  Future<void> _seleccionarImagen() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imagenSeleccionada = File(pickedFile.path);
+      });
+    }
+  }
+
+  // --- Lógica para guardar (con imagen) ---
   Future<void> _handleGuardar() async {
     // 1. Validar el formulario
     if (!_formKey.currentState!.validate()) {
       return; // Si hay errores, no hace nada
     }
-
-    // 2. Validar que se seleccionó una categoría
-    if (_selectedCategoriaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, selecciona una categoría'), backgroundColor: Colors.red),
-      );
-      return;
-    }
+    // (La validación del dropdown ya está en el validator del TextFormField)
 
     setState(() { _isLoading = true; });
 
     try {
-      // 3. Llamar al servicio
+      // 3. Llamar al servicio (con la imagen)
       await _productoService.createProducto(
         nombre: _nombreController.text,
         descripcion: _descripcionController.text,
         precio: double.parse(_precioController.text),
         categoriaId: _selectedCategoriaId!,
         cantidad: int.parse(_cantidadController.text),
+        imagen: _imagenSeleccionada, // <-- Pasamos la imagen
       );
 
       // 4. ¡Éxito!
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Producto creado exitosamente!'), backgroundColor: Colors.green),
       );
-      // Regresamos a la pantalla anterior (VendedorHomeScreen)
-      Navigator.pop(context, true); // Enviamos 'true' para indicar que refresque
+      Navigator.pop(context, true); // Regresamos (y refrescamos)
 
     } catch (e) {
       // 5. Error
@@ -93,9 +102,37 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView( // Usamos ListView en lugar de Column para evitar overflow
+        child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+
+            // --- Widget para el Preview de Imagen ---
+            InkWell(
+              onTap: _seleccionarImagen, // Llama a la función al tocar
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[400]!),
+                ),
+                child: _imagenSeleccionada != null
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(_imagenSeleccionada!, fit: BoxFit.cover),
+                )
+                    : const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_alt, size: 50, color: Colors.grey),
+                    Text('Seleccionar Imagen', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // --- Campo Nombre ---
             TextFormField(
               controller: _nombreController,
@@ -109,7 +146,7 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- Dropdown de Categorías ---
+            // --- Dropdown de Categorías (Completo) ---
             FutureBuilder<List<CategoriaModel>>(
               future: _categoriasFuture,
               builder: (context, snapshot) {
@@ -126,7 +163,7 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
                   items: snapshot.data!.map((categoria) {
                     return DropdownMenuItem<int>(
                       value: categoria.id,
-                      child: Text(categoria.nombre),
+                      child: Text(categoria.nombre, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -143,7 +180,7 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- Campo Precio ---
+            // --- Campo Precio (Completo) ---
             TextFormField(
               controller: _precioController,
               decoration: const InputDecoration(labelText: 'Precio (Ej: 150.00)'),
@@ -160,7 +197,7 @@ class _CrearProductoScreenState extends State<CrearProductoScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- Campo Cantidad ---
+            // --- Campo Cantidad (Completo) ---
             TextFormField(
               controller: _cantidadController,
               decoration: const InputDecoration(labelText: 'Cantidad Disponible'),

@@ -53,8 +53,8 @@ class ProductoModel {
       nombre: json['nombre'],
       descripcion: json['descripcion'],
       // El precio viene como String desde Laravel, lo convertimos a double
-      precio: double.parse(json['precio']),
-      cantidadDisponible: json['cantidad_disponible'],
+      precio: double.parse(json['precio'].toString()),
+      cantidadDisponible: int.parse(json['cantidad_disponible'].toString()),
       urlImagen: json['url_imagen'],
       vendedor: VendedorModel.fromJson(json['vendedor']),
       categoria: CategoriaModel.fromJson(json['categoria']),
