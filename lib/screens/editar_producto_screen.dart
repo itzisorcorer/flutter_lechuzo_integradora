@@ -5,6 +5,7 @@ import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   // Recibimos el producto que vamos a editar
@@ -229,20 +230,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       );
     } else if (_imagenUrlExistente != null) {
       //Si NO hay foto nueva, pero SÍ había una foto VIEJA, la cargamos
+      print('URL: ${Ambiente.urlServer + _imagenUrlExistente!}');
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.network( // <-- ¡Usamos Image.network!
-          Ambiente.urlServer + _imagenUrlExistente!,
+        child: CachedNetworkImage(
+          imageUrl: Ambiente.urlServer + _imagenUrlExistente!,
           fit: BoxFit.cover,
-          // Placeholder mientras carga
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const Center(child: CircularProgressIndicator());
-          },
-          // Error si no puede cargar la URL
-          errorBuilder: (context, error, stack) {
-            return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
-          },
+          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+          errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
         ),
       );
     } else {

@@ -4,7 +4,7 @@ import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
-import 'package:flutter_lechuzo_integradora/screens/editar_producto_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/producto_detalle_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -122,43 +122,57 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final producto = _filteredProducts[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          elevation: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  producto.nombre,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        //InkWell para hacerlo "tocable"
+        return InkWell(
+          onTap: () {
+            // Cuando lo tocan, navegamos a la pantalla de detalle
+            // y le pasamos el producto que tocaron
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductoDetalleScreen(producto: producto),
+              ),
+            );
+          },
+          child: Card( // Tu Card original va adentro
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    producto.nombre,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Vendido por: ${producto.vendedor.nombreTienda}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    fontStyle: FontStyle.italic,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Vendido por: ${producto.vendedor.nombreTienda}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '\$${producto.precio.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green[700],
+                  const SizedBox(height: 12),
+                  Text(
+                    '\$${producto.precio.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green[700],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
+
       },
     );
   }
