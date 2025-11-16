@@ -1,7 +1,10 @@
 // lib/services/cart_service.dart
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_lechuzo_integradora/Modelos/CartItemModel.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
+import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
+import 'package:http/http.dart' as http;
 
 
 class CartService extends ChangeNotifier {
@@ -9,6 +12,11 @@ class CartService extends ChangeNotifier {
 
   final List<CartItemModel> _items = [];
   List<CartItemModel> get items => _items;
+
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+
 
 
   double get total {
@@ -63,4 +71,103 @@ class CartService extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+  //función checkout para pagar
+  Future<String> checkout() async{
+    final token = Ambiente.token;
+    if(token.isEmpty){
+      throw Exception('No estas autenticado. Error.');
+    }
+    if(_items.isEmpty){
+      throw Exception('El carrito esta vacío.');
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
+    try{
+      //Convertimos el carrito al JSON que espera Laravel
+      final List<Map<String, dynamic>> itemsJson = _items.map((item){
+        return {
+          'producto_id': item.producto.id,
+          'cantidad': item.cantidad,
+        };
+      }).toList();
+
+      final bodyCheckout = {
+        'items': itemsJson,
+      };
+
+      //1. Llamamos a /api/checkout
+      final urlCheckout = Uri.parse('${Ambiente.urlServer}/api/checkout');
+      final responseCheckout = await http.post(
+        urlCheckout,
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept' : 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(bodyCheckout),
+      );
+
+      print('Respuesta de Checkout: ${responseCheckout.statusCode}');
+      print('Cuerpo: ${responseCheckout.body}');
+
+      // 2. Verificamos si la creación de la orden fue exitosa
+      if(responseCheckout.statusCode != 201) {
+        // Si falló, lanzamos el error y paramos
+        final errorBody = jsonDecode(responseCheckout.body);
+        throw Exception(errorBody['message'] ?? 'Error al crear el pedido');
+      }
+
+      // 3. ¡Éxito! Leemos los IDs de las ordenes
+      // (Ahora esto SÍ está dentro de la lógica de éxito)
+      final dataCheckout = jsonDecode(responseCheckout.body);
+      final List<int> ordenIds = List<int>.from(dataCheckout['orden_ids']);
+
+      if(ordenIds.isEmpty){
+        throw Exception('El backend no devolvió IDs de orden');
+      }
+
+      // 4. Creamos la preferencia MP (solo para la primera orden)
+      final primerOrdenId = ordenIds.first;
+      final initPoint = await _crearPreferenciaMP(primerOrdenId, token);
+
+      // 5. ¡Ahora SÍ vaciamos el carrito y devolvemos el link!
+      vaciarCarrito(); // Esto llama a notifyListeners()
+      return initPoint;
+
+    }catch(e){
+      // Si algo falla, dejamos de cargar y lanzamos el error
+      _isLoading = false;
+      notifyListeners();
+      throw e;
+    }
+    // (Ya no necesitamos el 'finally' porque 'vaciarCarrito'
+    // se encarga de quitar el spinner con 'notifyListeners')
+  }
+
+  // --- (Tu función _crearPreferenciaMP está perfecta) ---
+  Future<String> _crearPreferenciaMP(int ordenId, String token) async{
+    // ... (tu código está bien)
+    // ...
+    final urlPago = Uri.parse('${Ambiente.urlServer}/api/pagos/crear-preferencia/$ordenId');
+    final responsePago = await http.post(
+      urlPago,
+      headers: {
+        'Accept': 'application/json', // <-- ¡Asegúrate de tener 'Accept' aquí!
+        'Authorization': 'Bearer $token',
+      },
+    );
+    print('Respuesta de MP: ${responsePago.body}');
+    if(responsePago.statusCode == 201){
+      final dataPago = jsonDecode(responsePago.body);
+      return dataPago['init_point'];
+    }else{
+      throw Exception('Error al crear el link de mercado Pago');
+    }
+  }
+
+
+
 }
+
