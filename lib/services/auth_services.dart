@@ -133,6 +133,23 @@ class AuthService {
         throw Exception('Error al obtener los programas educativos');
       }
     }
+    Future<void> logout() async{
+    final token = Ambiente.token;
+    final url = Uri.parse('${Ambiente.urlServer}/api/logout');
+
+    try{
+      await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      print('Sección cerrada en el servidor');
+    }catch(e){
+      print('Error al cerrar sesión en el servidor: $e');
+    }
+    }
 }
 
 

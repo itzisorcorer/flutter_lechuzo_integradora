@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/services/cart_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_custom_tabs/flutter_custom_tabs.dart'; // <-- ¡Este es el que importa!
+import 'package:flutter_custom_tabs/flutter_custom_tabs.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -14,7 +14,6 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
 
-  // --- FUNCIÓN DE CHECKOUT (Esta estaba bien) ---
   Future<void> _handleCheckout(BuildContext context) async {
     final cart = context.read<CartService>();
     if (cart.isLoading) return; // Evitar doble-tap
@@ -44,9 +43,9 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _launchMPCheckout(BuildContext context, String url) async {
     try {
-      // 1. La función se llama 'launch' (no 'launchUrl')
+
       await launch(
-        url, // 2. Se pasa el String directamente (no Uri.parse(url))
+        url,
         customTabsOption: CustomTabsOption(
           toolbarColor: Theme.of(context).primaryColor,
           showPageTitle: true,
@@ -63,7 +62,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // --- (Función para el diálogo de vaciar carrito, está perfecta) ---
+  //(Función para el diálogo de vaciar carrito
   void _showVaciarCarritoDialog(BuildContext context, CartService cart) {
     showDialog(
       context: context,

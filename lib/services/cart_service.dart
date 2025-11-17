@@ -97,7 +97,7 @@ class CartService extends ChangeNotifier {
         'items': itemsJson,
       };
 
-      //1. Llamamos a /api/checkout
+      //Llamamos a /api/checkout
       final urlCheckout = Uri.parse('${Ambiente.urlServer}/api/checkout');
       final responseCheckout = await http.post(
         urlCheckout,
@@ -118,9 +118,7 @@ class CartService extends ChangeNotifier {
         final errorBody = jsonDecode(responseCheckout.body);
         throw Exception(errorBody['message'] ?? 'Error al crear el pedido');
       }
-
-      // 3. ¡Éxito! Leemos los IDs de las ordenes
-      // (Ahora esto SÍ está dentro de la lógica de éxito)
+      //si es 201...
       final dataCheckout = jsonDecode(responseCheckout.body);
       final List<int> ordenIds = List<int>.from(dataCheckout['orden_ids']);
 
@@ -132,29 +130,25 @@ class CartService extends ChangeNotifier {
       final primerOrdenId = ordenIds.first;
       final initPoint = await _crearPreferenciaMP(primerOrdenId, token);
 
-      // 5. ¡Ahora SÍ vaciamos el carrito y devolvemos el link!
+
       vaciarCarrito(); // Esto llama a notifyListeners()
       return initPoint;
 
     }catch(e){
-      // Si algo falla, dejamos de cargar y lanzamos el error
+
       _isLoading = false;
       notifyListeners();
       throw e;
     }
-    // (Ya no necesitamos el 'finally' porque 'vaciarCarrito'
-    // se encarga de quitar el spinner con 'notifyListeners')
   }
 
-  // --- (Tu función _crearPreferenciaMP está perfecta) ---
+
   Future<String> _crearPreferenciaMP(int ordenId, String token) async{
-    // ... (tu código está bien)
-    // ...
     final urlPago = Uri.parse('${Ambiente.urlServer}/api/pagos/crear-preferencia/$ordenId');
     final responsePago = await http.post(
       urlPago,
       headers: {
-        'Accept': 'application/json', // <-- ¡Asegúrate de tener 'Accept' aquí!
+        'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
     );

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/screens/cart_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/home_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/mis_pedidos_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/profile_screen.dart';
 
 class EstudianteMainScreen extends StatefulWidget {
@@ -51,7 +52,7 @@ class _EstudianteMainScreenState extends State<EstudianteMainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Perfil',
+            label: 'Mi perfil',
           ),
         ],
         currentIndex: _selectedIndex,
