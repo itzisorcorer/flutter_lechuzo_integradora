@@ -1,7 +1,6 @@
 // lib/Modelos/OrdenModel.dart
-import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart'; // ¡Reutilizamos los modelos que ya tenemos!
+import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 
-// Modelo para la respuesta de paginación completa
 class PaginatedOrdenesResponse {
   final List<OrdenModel> ordenes;
   final int currentPage;
@@ -25,19 +24,20 @@ class PaginatedOrdenesResponse {
   }
 }
 
-// Modelo para una sola Orden
 class OrdenModel {
   final int id;
   final String status;
   final double cantidadTotal;
-  final VendedorModel vendedor; // ¡Reutilizamos VendedorModel!
+  final VendedorModel? vendedor; // <-- Ahora es opcional (para el flujo de vendedor)
+  final EstudianteModel? estudiante; // <-- Nuevo (para saber quién compró)
   final List<ItemsOrdenModel> itemsOrdenes;
 
   OrdenModel({
     required this.id,
     required this.status,
     required this.cantidadTotal,
-    required this.vendedor,
+    this.vendedor,
+    this.estudiante,
     required this.itemsOrdenes,
   });
 
@@ -49,17 +49,18 @@ class OrdenModel {
       id: json['id'],
       status: json['status'],
       cantidadTotal: double.parse(json['cantidad_total'].toString()),
-      vendedor: VendedorModel.fromJson(json['vendedor']),
+      // Revisamos si vienen en el JSON antes de parsear
+      vendedor: json['vendedor'] != null ? VendedorModel.fromJson(json['vendedor']) : null,
+      estudiante: json['estudiante'] != null ? EstudianteModel.fromJson(json['estudiante']) : null,
       itemsOrdenes: items,
     );
   }
 }
 
-// Modelo para los items dentro de una orden
 class ItemsOrdenModel {
   final int cantidad;
   final double precioDeCompra;
-  final ProductoModel producto; // ¡El producto que se compró!
+  final ProductoModel producto;
 
   ItemsOrdenModel({
     required this.cantidad,
@@ -72,6 +73,22 @@ class ItemsOrdenModel {
       cantidad: json['cantidad'],
       precioDeCompra: double.parse(json['precio_de_compra'].toString()),
       producto: ProductoModel.fromJson(json['producto']),
+    );
+  }
+}
+
+//MODELO DE ESTUDIANTE
+class EstudianteModel {
+  final int id;
+  final String nombreCompleto;
+  // final String matricula; // Puedes agregarla si la necesitas
+
+  EstudianteModel({required this.id, required this.nombreCompleto});
+
+  factory EstudianteModel.fromJson(Map<String, dynamic> json) {
+    return EstudianteModel(
+      id: json['id'],
+      nombreCompleto: json['nombre_completo'],
     );
   }
 }

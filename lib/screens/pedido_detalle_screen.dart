@@ -52,7 +52,7 @@ class PedidoDetalleScreen extends StatelessWidget {
                   children: [
                     const Text('Vendedor:', style: TextStyle(fontSize: 16)),
                     Text(
-                      orden.vendedor.nombreTienda,
+                      orden.vendedor?.nombreTienda ?? "Desconocido",
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],

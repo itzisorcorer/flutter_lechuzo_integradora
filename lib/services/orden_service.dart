@@ -29,4 +29,29 @@ class OrdenService {
       throw Exception('Error al cargar tus órdenes: ${response.body}');
     }
   }
+  //funcion para obtener las ventas
+Future<PaginatedOrdenesResponse> getMisVentas()async {
+    final token = Ambiente.token;
+    if(token.isEmpty){
+      throw Exception('Token no encontrado. Inicia sesión');
+    }
+    final url = Uri.parse('${Ambiente.urlServer}/api/vendedor/ordenes');
+    print('Consultando ventas: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if(response.statusCode == 200){
+      return PaginatedOrdenesResponse.fromJson(jsonDecode(response.body));
+    }else{
+      throw Exception('Error al cargar tus ventas: ${response.body}');
+
+    }
+
+}
 }

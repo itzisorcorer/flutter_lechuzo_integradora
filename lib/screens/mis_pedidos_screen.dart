@@ -119,7 +119,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
 
                     // Vendedor
                     Text(
-                      'Vendido por: ${orden.vendedor.nombreTienda}',
+                      'Vendido por: ${orden.vendedor?.nombreTienda ?? "Desconocido"}',
                       style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.black54),
                     ),
                     const SizedBox(height: 12),
