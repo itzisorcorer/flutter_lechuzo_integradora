@@ -22,7 +22,10 @@ class _VentasScreenState extends State<VentasScreen> {
   }
 
   void _cargarVentas() {
-    _ventasFuture = _ordenService.getMisVentas().then((response) => response.ordenes);
+    // ¡El setState es lo que hace que la pantalla parpadee y se actualice!
+    setState(() {
+      _ventasFuture = _ordenService.getMisVentas().then((response) => response.ordenes);
+    });
   }
 
   Color _getStatusColor(String status) {
@@ -89,14 +92,30 @@ class _VentasScreenState extends State<VentasScreen> {
                               'Pedido #${venta.id}',
                               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
-                            Chip(
-                              label: Text(
-                                venta.status.toUpperCase(),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                              backgroundColor: _getStatusColor(venta.status),
-                              padding: const EdgeInsets.all(0),
-                            ),
+                            Row(
+                              children: [
+                                Chip(
+                                  label: Text(
+                                    venta.status.toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                  backgroundColor: _getStatusColor(venta.status),
+                                ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert),
+                                  onSelected: (String nuevoStatus){
+                                    _cambiarStatus(venta.id, nuevoStatus);
+                                  },
+                                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                    const PopupMenuItem(value: 'en_progreso', child: Text('Marcar: En Progreso')),
+                                    const PopupMenuItem(value: 'listo', child: Text('Marcar: Listo para Recoger')),
+                                    const PopupMenuItem(value: 'completado', child: Text('Marcar: Entregado/Completado')),
+                                    const PopupMenuItem(value: 'cancelado', child: Text('Cancelar Pedido ')),
+
+                                  ],
+                                ),
+                              ],
+                            )
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -132,5 +151,24 @@ class _VentasScreenState extends State<VentasScreen> {
         },
       ),
     );
+  }
+  //Funciones Future
+Future<void> _cambiarStatus (int ordenId, String nuevoStatus)async{
+  try{
+    await _ordenService.updateOrdenStatus(ordenId, nuevoStatus);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Orden #$ordenId actualizado a: "$nuevoStatus"'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    _cargarVentas();
+    }catch(e){
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+      );
+    }
   }
 }

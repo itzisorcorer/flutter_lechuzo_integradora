@@ -52,6 +52,25 @@ Future<PaginatedOrdenesResponse> getMisVentas()async {
       throw Exception('Error al cargar tus ventas: ${response.body}');
 
     }
+  }
+  Future<void> updateOrdenStatus (int ordenId, String nuevoStatus) async{
+    final token = Ambiente.token;
+    final url = Uri.parse('${Ambiente.urlServer}/api/vendedor/ordenes/$ordenId');
 
-}
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'status' : nuevoStatus}),
+    );
+    if(response.statusCode == 200){
+      return; //Exito
+    }else{
+      throw Exception('Error al actualizar el estatus: ${response.body}');
+    }
+
+  }
 }
