@@ -148,8 +148,33 @@ class AuthService {
       print('Sección cerrada en el servidor');
     }catch(e){
       print('Error al cerrar sesión en el servidor: $e');
+      }
     }
+  // --- NUEVA FUNCIÓN: RECUPERAR CONTRASEÑA ---
+  Future<void> sendPasswordResetLink(String email) async {
+    final url = Uri.parse('${Ambiente.urlServer}/api/forgot-password');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json',
+        // No enviamos token porque el usuario no está logueado
+      },
+      body: jsonEncode({'email': email}),
+    );
+
+    print('Respuesta Forgot Password: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      // Éxito: El backend envió el correo
+      return;
+    } else {
+      // Error: El correo no existe o falló el servidor
+      final errorBody = jsonDecode(response.body);
+      throw Exception(errorBody['message'] ?? 'Error al enviar el enlace.');
     }
+  }
 }
 
 

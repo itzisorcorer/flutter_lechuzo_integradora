@@ -1,136 +1,270 @@
 // lib/screens/producto_detalle_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/cart_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-class ProductoDetalleScreen extends StatelessWidget {
-  // 1. Recibimos el producto que el usuario tocó
+class ProductoDetalleScreen extends StatefulWidget {
   final ProductoModel producto;
 
   const ProductoDetalleScreen({super.key, required this.producto});
 
   @override
+  State<ProductoDetalleScreen> createState() => _ProductoDetalleScreenState();
+}
+
+class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
+  // estado inicial del selector
+  int _cantidad = 1;
+
+  // --- PALETA DE COLORES (Comprador) ---
+  final Color _colPrimario = const Color(0xFF032C42); // Azul Oscuro
+  final Color _colSecundario = const Color(0xFF175554);
+  final Color _colAcento = const Color(0xFF24799E); // Azul Botón
+  final Color _colFondo = const Color(0xFFFEF8D8); // Crema
+
+  void _incrementar() {
+    // Validamos que no supere el stock disponible
+    if (_cantidad < widget.producto.cantidadDisponible) {
+      setState(() => _cantidad++);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡No hay más stock disponible!')),
+      );
+    }
+  }
+
+  void _decrementar() {
+    if (_cantidad > 1) {
+      setState(() => _cantidad--);
+    }
+  }
+
+  void _agregarAlCarrito() {
+    final cart = context.read<CartService>();
+    // Usamos la cantidad seleccionada
+    cart.agregarProducto(widget.producto, cantidadAAgregar: _cantidad);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Agregaste $_cantidad ${widget.producto.nombre} al carrito'),
+        backgroundColor: _colSecundario,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+    Navigator.pop(context); // Regresar a la tienda
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
+      backgroundColor: _colPrimario, // El fondo detrás de todo es el Azul Oscuro
       appBar: AppBar(
-        title: Text(producto.nombre),
+        backgroundColor: _colPrimario,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () {},
+          )
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: SizedBox(
+        height: size.height,
+        child: Stack(
           children: [
-
-
-            Container(
-              height: 300, // Una altura fija para la foto
-              width: double.infinity,
-              color: Colors.grey[200],
-              child: producto.urlImagen != null
-                  ? CachedNetworkImage(
-                imageUrl: Ambiente.urlServer + producto.urlImagen!,
-                fit: BoxFit.cover,
-                // Un placeholder bonito mientras carga
-                placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                // El widget de error si falla (como ahora)
-                errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, size: 150, color: Colors.grey)),
-              )
-                  : const Center(child: Icon(Icons.inventory_2, size: 150, color: Colors.grey)),
-
-            ),
-
-            //Información del Producto ---
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Nombre
-                  Text(
-                    producto.nombre,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            // --- 1. PANEL BLANCO/CREMA INFERIOR ---
+            Positioned(
+              top: size.height * 0.3, // Empieza al 30% de la pantalla
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _colFondo, // Color Crema
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(40),
+                    topRight: Radius.circular(40),
                   ),
-                  const SizedBox(height: 8),
-
-                  // Precio
-                  Text(
-                    '\$${producto.precio.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[700],
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 70, 24, 24), // Padding top grande para la imagen
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Nombre y Precio
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.producto.nombre,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: _colPrimario,
+                                ),
+                              ),
+                              Text(
+                                widget.producto.categoria.nombre, // "Burger" en tu ejemplo
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '\$${widget.producto.precio.toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: _colAcento, // Precio resaltado
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
 
-                  // Vendedor
-                  Text(
-                    'Vendido por: ${producto.vendedor.nombreTienda}',
-                    style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 20),
 
-                  // Categoría
-                  Text(
-                    'Categoría: ${producto.categoria.nombre}',
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 24),
+                    // Vendedor (Info extra)
+                    Row(
+                      children: [
+                        const Icon(Icons.storefront, color: Colors.grey, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Vendido por: ${widget.producto.vendedor.nombreTienda}',
+                          style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 14),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.star, color: Colors.amber[700], size: 20),
+                        Text(
+                          " 4.8", // (Hardcodeado por ahora, luego lo traemos de la BD)
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
 
-                  // Descripción
-                  const Text(
-                    'Descripción',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 30),
+
+                    // Descripción
+                    Text(
+                      "Descripción",
+                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: _colPrimario),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(
+                          widget.producto.descripcion ?? "Sin descripción disponible.",
+                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700], height: 1.6),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // --- ZONA DE ACCIÓN INFERIOR ---
+                    Row(
+                      children: [
+                        // Selector de Cantidad (- 1 +)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                          ),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.remove, color: _colPrimario),
+                                onPressed: _decrementar,
+                              ),
+                              Text(
+                                '$_cantidad',
+                                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: _colPrimario),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.add, color: _colPrimario),
+                                onPressed: _incrementar,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 20),
+
+                        // Botón Agregar al Carrito
+                        Expanded(
+                          child: SizedBox(
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: _agregarAlCarrito,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _colSecundario, // Verde Oscuro
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                elevation: 5,
+                              ),
+                              child: Text(
+                                "Agregar al Carrito",
+                                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // --- 2. LA IMAGEN FLOTANTE (HERO) ---
+            // La ponemos después del panel para que quede ENCIMA
+            Positioned(
+              top: size.height * 0.05, // Ajusta esto para subir/bajar la imagen
+              left: 0,
+              right: 0,
+              height: size.height * 0.35, // 35% de la pantalla
+              child: Hero(
+                tag: "producto-${widget.producto.id}", // ¡Animación bonita al entrar!
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    producto.descripcion ?? 'Este producto no tiene descripción.',
-                    style: const TextStyle(fontSize: 16, height: 1.5), // height: 1.5 = interlineado
+                  child: ClipOval( // La hacemos circular para que se vea como en la referencia
+                    child: widget.producto.urlImagen != null
+                        ? CachedNetworkImage(
+                      imageUrl: Ambiente.urlServer + widget.producto.urlImagen!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const CircularProgressIndicator(),
+                      errorWidget: (context, url, error) => Container(color: Colors.white, child: const Icon(Icons.broken_image, size: 50)),
+                    )
+                        : Container(color: Colors.white, child: Icon(Icons.fastfood, size: 80, color: _colAcento)),
                   ),
-                ],
+                ),
               ),
             ),
           ],
-        ),
-      ),
-
-      //Botón Flotante de "Agregar al Carrito" ---
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          icon: const Icon(Icons.shopping_cart_checkout),
-          label: const Text('Agregar al Carrito'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          onPressed: () {
-            final cart = context.read<CartService>();
-
-            cart.agregarProducto(producto);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${producto.nombre} agregado al carrito!'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 1),
-              ),
-            );
-
-          },
         ),
       ),
     );
