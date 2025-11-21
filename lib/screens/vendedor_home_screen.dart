@@ -25,7 +25,7 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
   final Color _colOscuro = const Color(0xFF557689); // Gris Azulado Oscuro
   final Color _colMedio = const Color(0xFF4C8AB9);  // Azul Acero
   final Color _colClaro = const Color(0xFF84C1F8);  // Azul Cielo
-  final Color _colFondoCard = const Color(0xFFCFEAFF); // Azul Muy Claro (Fondo items)
+  final Color _colFondoCard = const Color(0xFFCFEAFF); // Azul Muy Claro
   final Color _colVerde = const Color(0xFF98E27F);  // Verde (Acción/Precio)
 
   @override
@@ -53,7 +53,7 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
     }
   }
 
-  // Lógica de Borrado (Tu misma lógica, solo integrada en el nuevo diseño)
+  // Lógica de Borrado
   Future<void> _mostrarDialogoConfirmacion(ProductoModel producto) async {
     return showDialog<void>(
       context: context,
@@ -101,12 +101,12 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo limpio
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 1. CABECERA ESTILO DASHBOARD ---
+            // --- 1. CABECERA ---
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
               child: Row(
@@ -133,7 +133,7 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
                       ),
                     ],
                   ),
-                  // Botón flotante pequeño de "Añadir" en la cabecera (Opcional, o abajo)
+                  // Botón flotante "Añadir"
                   InkWell(
                     onTap: () async {
                       final res = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CrearProductoScreen()));
@@ -189,12 +189,11 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
       itemCount: _misProductos.length,
       itemBuilder: (context, index) {
         final producto = _misProductos[index];
-        // Alternamos colores para que se vea dinámico como en la referencia
+        // Alternamos colores para el fondo de la tarjeta
         final Color cardColor = index % 2 == 0 ? _colOscuro : _colMedio;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(25),
@@ -206,18 +205,25 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              // --- IMAGEN (Cuadrada con bordes suaves) ---
-              Container(
-                width: 70,
-                height: 70,
+          child: Theme(
+            // Quitamos los bordes por defecto del ExpansionTile para que se vea limpio
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              // Ajustamos el padding para que coincida con tu diseño original
+              tilePadding: const EdgeInsets.all(16),
+              iconColor: Colors.white,
+              collapsedIconColor: Colors.white,
+
+              // --- 1. IMAGEN (A la izquierda) ---
+              leading: Container(
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(15),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(15),
                   child: producto.urlImagen != null
                       ? CachedNetworkImage(
                     imageUrl: Ambiente.urlServer + producto.urlImagen!,
@@ -228,60 +234,63 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
                 ),
               ),
 
-              const SizedBox(width: 16),
-
-              // --- INFO ---
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      producto.nombre,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    // Categoría y Stock
-                    Row(
-                      children: [
-                        Text(
-                          producto.categoria.nombre,
-                          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'Stock: ${producto.cantidadDisponible}',
-                            style: GoogleFonts.poppins(color: Colors.white, fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '\$${producto.precio.toStringAsFixed(2)}',
-                      style: GoogleFonts.poppins(
-                        color: _colVerde, // Precio en verde brillante
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+              // --- 2. INFORMACIÓN PRINCIPAL ---
+              title: Text(
+                producto.nombre,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
 
-              // --- ACCIONES (Editar/Borrar) ---
-              Column(
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  // Categoría y Stock
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          producto.categoria.nombre,
+                          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Stock: ${producto.cantidadDisponible}',
+                          style: GoogleFonts.poppins(color: Colors.white, fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Precio
+                  Text(
+                    '\$${producto.precio.toStringAsFixed(2)}',
+                    style: GoogleFonts.poppins(
+                      color: _colVerde,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+
+              // --- 3. BOTONES DE ACCIÓN (A la derecha) ---
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Editar
                   InkWell(
@@ -295,31 +304,47 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
                         _fetchMisProductos();
                       }
                     },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.edit, color: Colors.white, size: 18),
-                    ),
+                    child: const Icon(Icons.edit, color: Colors.black, size: 20),
                   ),
-                  const SizedBox(height: 10),
-                  // Borrar
+                  const SizedBox(height: 12),
+                  // Eliminar
                   InkWell(
                     onTap: () => _mostrarDialogoConfirmacion(producto),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.delete, color: Colors.white70, size: 18),
-                    ),
+                    child: const Icon(Icons.delete, color: Colors.red, size: 20),
                   ),
                 ],
               ),
-            ],
+
+              // --- 4. CONTENIDO EXPANDIDO (Descripción) ---
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Divider(color: Colors.white24),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Descripción:",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        producto.descripcion ?? "Sin descripción detallada.",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
