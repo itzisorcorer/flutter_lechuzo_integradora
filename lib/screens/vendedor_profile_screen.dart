@@ -4,6 +4,7 @@ import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/screens/login_screens.dart';
 import 'package:flutter_lechuzo_integradora/services/auth_services.dart';
 import 'package:flutter_lechuzo_integradora/services/vendedor_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class VendedorProfileScreen extends StatefulWidget {
   const VendedorProfileScreen({super.key});
@@ -17,6 +18,12 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
   Map<String, dynamic>? _perfilData;
   bool _isLoading = true;
 
+  // --- PALETA VENDEDOR ---
+  final Color _colFondo = const Color(0xFF557689); // Tu Azul Grisáceo (Fondo)
+  final Color _colCard = Colors.white; // Tarjetas
+  final Color _colTexto = const Color(0xFF557689);
+  final Color _colVerde = const Color(0xFF98E27F); // Acento
+
   @override
   void initState() {
     super.initState();
@@ -26,11 +33,11 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
   Future<void> _cargarPerfil() async {
     try {
       final data = await _vendedorService.getPerfil();
-      // Verificamos 'mounted' antes de usar setState
       if (mounted) {
         setState(() {
           _perfilData = data;
           _isLoading = false;
+          // Actualizamos el nombre global para que se vea en otras pantallas
           Ambiente.nombreUsuario = data['nombre_tienda'];
         });
       }
@@ -41,51 +48,48 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
     }
   }
 
-  // --- CORRECCIÓN 1: EL DIÁLOGO DE EDITAR ---
+  // --- DIÁLOGO PARA EDITAR TIENDA ---
   void _mostrarDialogoEditar() {
     final nombreCtrl = TextEditingController(text: _perfilData?['nombre_tienda']);
     final descCtrl = TextEditingController(text: _perfilData?['description']);
 
     showDialog(
-      context: context, // Este es el contexto de la PANTALLA
-      builder: (dialogContext) => AlertDialog( // <-- Renombramos a dialogContext
-        title: const Text('Editar Tienda'),
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Editar Tienda', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: _colTexto)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nombreCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre de la Tienda'),
+              decoration: const InputDecoration(labelText: 'Nombre de la Tienda', border: OutlineInputBorder()),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             TextField(
               controller: descCtrl,
-              decoration: const InputDecoration(labelText: 'Descripción'),
+              decoration: const InputDecoration(labelText: 'Nombre y descripción', border: OutlineInputBorder()),
               maxLines: 3,
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext), // Cerramos usando el contexto del diálogo
-            child: const Text('Cancelar'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _colVerde),
             onPressed: () async {
-              // 1. Cerramos el diálogo INMEDIATAMENTE
-              Navigator.pop(dialogContext);
-
-              // 2. Ponemos a cargar la PANTALLA (usando 'this.setState')
-              setState(() { _isLoading = true; });
+              Navigator.pop(dialogContext); // Cerrar diálogo
+              setState(() { _isLoading = true; }); // Spinner en pantalla
 
               try {
                 await _vendedorService.updatePerfil(nombreCtrl.text, descCtrl.text);
-                await _cargarPerfil();
-
-                // 3. ¡MAGIA! Usamos 'mounted' y el 'context' de la PANTALLA (no el del diálogo)
+                await _cargarPerfil(); // Recargar datos nuevos
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Perfil actualizado'), backgroundColor: Colors.green),
+                    const SnackBar(content: Text('Tienda actualizada correctamente'), backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
@@ -97,32 +101,26 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
                 }
               }
             },
-            child: const Text('Guardar'),
+            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  // --- CORRECCIÓN 2: EL LOGOUT ---
-  // Quitamos el argumento (BuildContext context) porque ya tenemos acceso global a 'context'
+  // --- LOGOUT ---
   Future<void> _logout() async {
     final authService = AuthService();
-
-    // Intentamos avisar al backend (no importa si falla)
     try {
       await authService.logout();
     } catch (e) {
-      print("Error logout backend: $e");
+      print("Error logout: $e");
     }
-
-    // Limpiamos localmente SIEMPRE
     Ambiente.token = '';
     Ambiente.idUsuario = 0;
     Ambiente.nombreUsuario = '';
     Ambiente.rol = '';
 
-    // Usamos 'mounted' por seguridad
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
@@ -134,75 +132,116 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil de Tienda')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: _colFondo, // Fondo Azul Vendedor
+      appBar: AppBar(
+        title: Text('Mi Perfil', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: _colFondo,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Column(
         children: [
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.teal,
-                    child: Icon(Icons.store, size: 50, color: Colors.white),
+          const SizedBox(height: 20),
+
+          // --- 1. CABECERA (Icono y Nombre) ---
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                  child: const CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.store_rounded, size: 50, color: Color(0xFF557689)),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _perfilData?['nombre_tienda'] ?? 'Tienda',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _perfilData?['nombre_tienda'] ?? 'Mi Tienda',
+                  style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star, color: Colors.amber),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
                       Text(
-                        ' ${_perfilData?['rating_promedio'] ?? "0.0"}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        '${_perfilData?['rating_promedio'] ?? "0.0"} Rating',
+                        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  const Align(alignment: Alignment.centerLeft, child: Text("Descripción:", style: TextStyle(fontWeight: FontWeight.bold))),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _perfilData?['description'] ?? 'Sin descripción...',
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Editar Información'),
-                      onPressed: _mostrarDialogoEditar,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
           const SizedBox(height: 30),
 
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red, fontSize: 18)),
-            // Como _logout ya no pide argumentos, esto funciona directo:
-            onTap: _logout,
+          // --- 2. TARJETA BLANCA INFERIOR ---
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: _colCard,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const Text("INFORMACIÓN", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 10),
+
+                  // Descripción
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+                      child: Icon(Icons.description_outlined, color: _colTexto),
+                    ),
+                    title: Text("Descripción", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      _perfilData?['description'] ?? 'Sin descripción...',
+                      style: GoogleFonts.poppins(color: Colors.grey[600]),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                      onPressed: _mostrarDialogoEditar, // Abre el diálogo
+                    ),
+                  ),
+
+                  const Divider(height: 40),
+
+                  const Text("CUENTA", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 10),
+
+                  // Logout
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () => _logout(), // Cierra sesión
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.logout, color: Colors.red),
+                    ),
+                    title: Text("Cerrar Sesión", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.red)),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

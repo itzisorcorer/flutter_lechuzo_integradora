@@ -5,12 +5,11 @@ import 'package:flutter_lechuzo_integradora/Ambiente/ambiente.dart';
 import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class EditarProductoScreen extends StatefulWidget {
-  // Recibimos el producto que vamos a editar
   final ProductoModel producto;
-
   const EditarProductoScreen({super.key, required this.producto});
 
   @override
@@ -19,200 +18,235 @@ class EditarProductoScreen extends StatefulWidget {
 
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _productoService = ProductoService();
+  final ProductoService _productoService = ProductoService();
 
-  // Controladores
-  final _nombreController = TextEditingController();
-  final _descripcionController = TextEditingController();
-  final _precioController = TextEditingController();
-  final _cantidadController = TextEditingController();
+  late TextEditingController _nombreCtrl;
+  late TextEditingController _descripcionCtrl;
+  late TextEditingController _precioCtrl;
+  late TextEditingController _stockCtrl;
 
   // Dropdown
   late Future<List<CategoriaModel>> _categoriasFuture;
-  int? _selectedCategoriaId;
+  int? _categoriaId;
+
+  // Imagen
+  File? _nuevaImagen;
+  String? _imagenUrlExistente;
+  final ImagePicker _picker = ImagePicker();
+
   bool _isLoading = false;
 
-  // Estado de la Imagen
-  File? _imagenNueva; // La foto que el usuario acaba de tomar/elegir
-  String? _imagenUrlExistente; // La foto que ya estaba en el servidor
-  final ImagePicker _picker = ImagePicker();
+  // --- PALETA VENDEDOR ---
+  final Color _colFondoDark = const Color(0xFF557689); // Azul Oscuro Fondo
+  final Color _colIconos = const Color(0xFF4C8AB9);    // Azul Medio Iconos
+  final Color _colVerdeBtn = const Color(0xFF98E27F);  // Verde Botón
 
   @override
   void initState() {
     super.initState();
+    // Inicializar controladores con datos actuales
+    _nombreCtrl = TextEditingController(text: widget.producto.nombre);
+    _descripcionCtrl = TextEditingController(text: widget.producto.descripcion);
+    _precioCtrl = TextEditingController(text: widget.producto.precio.toStringAsFixed(2));
+    _stockCtrl = TextEditingController(text: widget.producto.cantidadDisponible.toString());
+    _categoriaId = widget.producto.categoria.id;
+    _imagenUrlExistente = widget.producto.urlImagen;
 
-    //Pre-llenamos el formulario con los datos del producto
-    _nombreController.text = widget.producto.nombre;
-    _descripcionController.text = widget.producto.descripcion ?? '';
-    _precioController.text = widget.producto.precio.toStringAsFixed(2);
-    _cantidadController.text = widget.producto.cantidadDisponible.toString();
-    _selectedCategoriaId = widget.producto.categoria.id;
-    _imagenUrlExistente = widget.producto.urlImagen; // Guardamos la URL de la foto vieja
-
-    // Cargamos las categorías
     _categoriasFuture = _productoService.getCategorias();
   }
 
   @override
   void dispose() {
-    _nombreController.dispose();
-    _descripcionController.dispose();
-    _precioController.dispose();
-    _cantidadController.dispose();
+    _nombreCtrl.dispose();
+    _descripcionCtrl.dispose();
+    _precioCtrl.dispose();
+    _stockCtrl.dispose();
     super.dispose();
   }
 
-
-  Future<void> _seleccionarImagen() async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      setState(() {
-        _imagenNueva = File(pickedFile.path);
-      });
+      setState(() { _nuevaImagen = File(pickedFile.path); });
     }
   }
 
-  //Lógica para ACTUALIZAR
-  Future<void> _handleActualizar() async {
-    if (!_formKey.currentState!.validate() || _selectedCategoriaId == null) {
+  Future<void> _guardarCambios() async {
+    if (!_formKey.currentState!.validate() || _categoriaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revisa los campos')));
       return;
     }
     setState(() { _isLoading = true; });
 
     try {
-      //Llamamos a la función 'updateProducto'
       await _productoService.updateProducto(
         productoId: widget.producto.id,
-        nombre: _nombreController.text,
-        descripcion: _descripcionController.text,
-        precio: double.parse(_precioController.text),
-        categoriaId: _selectedCategoriaId!,
-        cantidad: int.parse(_cantidadController.text),
-        imagenNueva: _imagenNueva,
+        nombre: _nombreCtrl.text,
+        descripcion: _descripcionCtrl.text,
+        precio: double.parse(_precioCtrl.text),
+        cantidad: int.parse(_stockCtrl.text),
+        categoriaId: _categoriaId!,
+        imagenNueva: _nuevaImagen,
       );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Producto actualizado!'), backgroundColor: Colors.green),
-      );
-      Navigator.pop(context, true);
-
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       setState(() { _isLoading = false; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString().replaceFirst("Exception: ", "")}'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
+      backgroundColor: _colFondoDark,
       appBar: AppBar(
-        title: const Text('Editar Producto'),
+        title: Text('Editar Producto', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: _colFondoDark,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
+      body: SizedBox(
+        height: size.height,
+        child: Stack(
           children: [
-
-            // --- 7. Widget de Imagen
-            InkWell(
-              onTap: _seleccionarImagen,
+            // --- 1. PANEL BLANCO INFERIOR ---
+            Positioned(
+              top: size.height * 0.15, // Empieza más arriba
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: Container(
-                height: 150,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[400]!),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                 ),
-                child: _buildImagePreview(),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 100, 24, 24), // Padding top grande para la imagen
+                    children: [
+                      // --- CATEGORÍA ---
+                      FutureBuilder<List<CategoriaModel>>(
+                        future: _categoriasFuture,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const LinearProgressIndicator();
+                          return _buildDropdown(snapshot.data!);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- NOMBRE ---
+                      _buildModernInput(
+                        controller: _nombreCtrl,
+                        label: 'Nombre del Producto',
+                        icon: Icons.edit,
+                        validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- PRECIO Y STOCK ---
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildModernInput(
+                              controller: _precioCtrl,
+                              label: 'Precio (\$)',
+                              icon: Icons.attach_money,
+                              isNumber: true,
+                              validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: _buildModernInput(
+                              controller: _stockCtrl,
+                              label: 'Stock',
+                              icon: Icons.inventory,
+                              isNumber: true,
+                              validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- DESCRIPCIÓN ---
+                      _buildModernInput(
+                        controller: _descripcionCtrl,
+                        label: 'Descripción',
+                        icon: Icons.description,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 30),
+
+                      // --- BOTÓN GUARDAR ---
+                      SizedBox(
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _guardarCambios,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _colVerdeBtn,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            elevation: 5,
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text('GUARDAR CAMBIOS', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
 
-
-            TextFormField(
-              controller: _nombreController,
-              decoration: const InputDecoration(labelText: 'Nombre del Producto'),
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'El nombre es obligatorio';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            FutureBuilder<List<CategoriaModel>>(
-              future: _categoriasFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError || !snapshot.hasData) {
-                  return const Text('Error al cargar categorías', style: TextStyle(color: Colors.red));
-                }
-                return DropdownButtonFormField<int>(
-                  value: _selectedCategoriaId,
-                  isExpanded: true,
-                  hint: const Text('Selecciona una categoría'),
-                  items: snapshot.data!.map((categoria) {
-                    return DropdownMenuItem<int>(
-                      value: categoria.id,
-                      child: Text(categoria.nombre, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() { _selectedCategoriaId = value; });
-                  },
-                  validator: (value) {
-                    if (value == null) return 'Debes seleccionar una categoría';
-                    return null;
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _precioController,
-              decoration: const InputDecoration(labelText: 'Precio (Ej: 150.00)'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'El precio es obligatorio';
-                if (double.tryParse(value) == null) return 'Ingresa un número válido';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _cantidadController,
-              decoration: const InputDecoration(labelText: 'Cantidad Disponible'),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'La cantidad es obligatoria';
-                if (int.tryParse(value) == null) return 'Ingresa un número entero';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _descripcionController,
-              decoration: const InputDecoration(labelText: 'Descripción (Opcional)'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 32),
-
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-              onPressed: _handleActualizar, // Llama a la función de 'update'
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            // --- 2. IMAGEN FLOTANTE ---
+            Positioned(
+              top: size.height * 0.02,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 4),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))],
+                        ),
+                        child: ClipOval(
+                          child: _getImageWidget(),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 5,
+                        right: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: _colIconos, shape: BoxShape.circle, border: Border.all(color: Colors.white)),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: const Text('Guardar Cambios'),
             ),
           ],
         ),
@@ -220,35 +254,78 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
-  //Widget Ayudante para la Imagen
-  Widget _buildImagePreview() {
-    if (_imagenNueva != null) {
-      //Si el usuario seleccionó una FOTO NUEVA, la mostramos
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(_imagenNueva!, fit: BoxFit.cover),
-      );
-    } else if (_imagenUrlExistente != null) {
-      //Si NO hay foto nueva, pero SÍ había una foto VIEJA, la cargamos
-      print('URL: ${Ambiente.urlServer + _imagenUrlExistente!}');
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: Ambiente.urlServer + _imagenUrlExistente!,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-          errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
-        ),
-      );
-    } else {
-      //Si no hay ni nueva ni vieja, mostramos el placeholder
-      return const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.camera_alt, size: 50, color: Colors.grey),
-          Text('Toca para cambiar la imagen', style: TextStyle(color: Colors.grey)),
-        ],
+  // --- WIDGETS AYUDANTES ---
+
+  Widget _getImageWidget() {
+    if (_nuevaImagen != null) {
+      return Image.file(_nuevaImagen!, fit: BoxFit.cover);
+    }
+    if (_imagenUrlExistente != null) {
+      return CachedNetworkImage(
+        imageUrl: Ambiente.urlServer + _imagenUrlExistente!,
+        fit: BoxFit.cover,
+        placeholder: (c, u) => const CircularProgressIndicator(),
+        errorWidget: (c, u, e) => const Icon(Icons.broken_image, color: Colors.grey),
       );
     }
+    return Container(color: Colors.grey[200], child: Icon(Icons.add_a_photo, size: 50, color: _colIconos));
+  }
+
+  Widget _buildModernInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isNumber = false,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      maxLines: maxLines,
+      validator: validator,
+      style: GoogleFonts.poppins(),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: _colIconos),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      ),
+    );
+  }
+
+// Helper para Dropdown Categoria
+  Widget _buildDropdown(List<CategoriaModel> categorias) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(15)),
+      child: DropdownButtonFormField<int>(
+        value: _categoriaId,
+
+        // --- CORRECCIÓN 1: EXPANDIR ---
+        // Esto evita que el dropdown trate de ser más ancho que la pantalla
+        isExpanded: true,
+
+        decoration: InputDecoration(
+          prefixIcon: Icon(Icons.category, color: _colIconos),
+          labelText: 'Categoría',
+          border: InputBorder.none,
+        ),
+        items: categorias.map((cat) => DropdownMenuItem(
+          value: cat.id,
+          // --- CORRECCIÓN 2: CORTE DE TEXTO ---
+          // Si el texto es muy largo, pone "..."
+          child: Text(
+            cat.nombre,
+            style: GoogleFonts.poppins(),
+            overflow: TextOverflow.ellipsis,
+          ),
+        )).toList(),
+        onChanged: (v) => setState(() => _categoriaId = v),
+        validator: (v) => v == null ? 'Selecciona una categoría' : null,
+      ),
+    );
   }
 }

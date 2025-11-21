@@ -40,7 +40,7 @@ class ProductoService {
   }
 
 //Función para obtener los productos del vendedor logueado - autenticado
-Future<PaginatedProductosResponse> getMisProductos() async{
+  Future<PaginatedProductosResponse> getMisProductos() async{
     final token = Ambiente.token;
 
     if(token.isEmpty) {
@@ -144,6 +144,7 @@ Future<PaginatedProductosResponse> getMisProductos() async{
     }
   }
 
+// --- FUNCIÓN CORREGIDA (Para enviar Imagen + Texto) ---
   Future<ProductoModel> updateProducto({
     required int productoId,
     required String nombre,
@@ -151,55 +152,54 @@ Future<PaginatedProductosResponse> getMisProductos() async{
     required double precio,
     required int categoriaId,
     required int cantidad,
-    File? imagenNueva,
+    File? imagenNueva, // <-- Aceptamos la imagen (opcional)
   }) async {
     final token = Ambiente.token;
 
-
+    // 1. Usamos la URL del producto
     final url = Uri.parse('${Ambiente.urlServer}/api/productos/$productoId');
 
-    //Creamos un request de tipo 'multipart' (POST)
+    // 2. ¡IMPORTANTE! Creamos un MultipartRequest 'POST' (NO 'PUT')
     var request = http.MultipartRequest('POST', url);
 
-
+    // 3. Headers
     request.headers.addAll({
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
     });
 
-
-    // Le decimos a Laravel que esto es una petición 'PUT'
+    // 4. --- ¡EL TRUCO! ---
+    // Le decimos a Laravel: "Aunque esto es un POST, trátalo como un PUT"
     request.fields['_method'] = 'PUT';
 
-
+    // 5. Datos de texto
     request.fields['nombre'] = nombre;
     request.fields['descripcion'] = descripcion;
     request.fields['precio'] = precio.toString();
     request.fields['categoria_id'] = categoriaId.toString();
     request.fields['cantidad_disponible'] = cantidad.toString();
+    // (Nota: No enviamos 'disponible' a menos que tengas un switch para eso)
 
-
-    //Añadimos la NUEVA IMAGEN (si el usuario seleccionó una)
+    // 6. Imagen (si hay una nueva)
     if (imagenNueva != null) {
       request.files.add(
           await http.MultipartFile.fromPath(
-            'imagen', // El 'name' que espera el backend
+            'imagen', // El nombre del campo que espera Laravel
             imagenNueva.path,
           )
       );
     }
 
-    //Enviamos y obtenemos la respuesta
+    // 7. Enviar
     var streamedResponse = await request.send();
     var response = await http.Response.fromStream(streamedResponse);
 
-    print('Respuesta de Actualizar Producto: ${response.statusCode}');
-    print('Cuerpo: ${response.body}');
+    print('Respuesta Update: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       return ProductoModel.fromJson(jsonDecode(response.body)['producto']);
     } else {
-      throw Exception('Error al actualizar el producto: ${response.body}');
+      throw Exception('Error al actualizar: ${response.body}');
     }
   }
 
