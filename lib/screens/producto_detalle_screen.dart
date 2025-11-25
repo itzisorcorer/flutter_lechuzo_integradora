@@ -254,7 +254,7 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                   child: ClipOval( // La hacemos circular para que se vea como en la referencia
                     child: widget.producto.urlImagen != null
                         ? CachedNetworkImage(
-                      imageUrl: Ambiente.urlServer + widget.producto.urlImagen!,
+                      imageUrl: Ambiente.getUrlImagen(widget.producto.urlImagen),
                       fit: BoxFit.cover,
                       placeholder: (context, url) => const CircularProgressIndicator(),
                       errorWidget: (context, url, error) => Container(color: Colors.white, child: const Icon(Icons.broken_image, size: 50)),

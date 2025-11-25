@@ -169,7 +169,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
                       borderRadius: BorderRadius.circular(10),
                       child: item.producto.urlImagen != null
                           ? CachedNetworkImage(
-                        imageUrl: Ambiente.urlServer + item.producto.urlImagen!,
+                        imageUrl: Ambiente.getUrlImagen(item.producto.urlImagen),
                         fit: BoxFit.cover,
                         placeholder: (c, u) => const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2)),
                         errorWidget: (c, u, e) => const Icon(Icons.broken_image, size: 20, color: Colors.grey),

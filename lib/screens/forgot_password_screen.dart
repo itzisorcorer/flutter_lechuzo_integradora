@@ -1,5 +1,6 @@
 // lib/screens/forgot_password_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_lechuzo_integradora/screens/reset_password_code_screen.dart';
 import 'package:flutter_lechuzo_integradora/services/auth_services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -48,7 +49,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             duration: Duration(seconds: 4),
           ),
         );
-        Navigator.pop(context); // Regresar al login
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ResetPasswordCodeScreen(email: _emailController.text),
+        ),
+        );
       }
     } catch (e) {
       if (mounted) {

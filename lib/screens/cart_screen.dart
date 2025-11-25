@@ -21,23 +21,127 @@ class _CartScreenState extends State<CartScreen> {
   final Color _colSecundario = const Color(0xFF175554); // Verde Oscuro (Botones)
   final Color _colAcento = const Color(0xFF24799E); // Azul Medio
 
-  // --- LÓGICA DE CHECKOUT ---
+// --- LÓGICA DE CHECKOUT ACTUALIZADA ---
   Future<void> _handleCheckout(BuildContext context) async {
     final cart = context.read<CartService>();
     if (cart.isLoading) return;
 
     try {
-      final String paymentUrl = await cart.checkout();
-      if (context.mounted) {
-        _launchMPCheckout(context, paymentUrl);
+      // 1. Crear las órdenes y obtener sus IDs
+      final List<int> ordenIds = await cart.checkout();
+
+      if (!context.mounted) return;
+
+      if (ordenIds.length == 1) {
+        // CASO A: Solo una orden (Flujo Rápido)
+        _pagarOrdenIndividual(context, ordenIds.first);
+      } else {
+        // CASO B: Múltiples órdenes (Flujo Multi-Vendedor)
+        _mostrarDialogoMultiOrden(context, ordenIds);
       }
+
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString().replaceFirst("Exception: ", "")}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
+  }
+
+  // Función auxiliar para procesar el pago de una orden
+  Future<void> _pagarOrdenIndividual(BuildContext context, int ordenId) async {
+    final cart = context.read<CartService>();
+    try {
+      // Mostrar loading o feedback visual pequeño si quieres
+      final url = await cart.obtenerLinkDePago(ordenId);
+      if (context.mounted) {
+        _launchMPCheckout(context, url);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al iniciar pago: $e')),
+      );
+    }
+  }
+
+  void _mostrarDialogoMultiOrden(BuildContext context, List<int> ordenIds) {
+    // Conjunto para rastrear localmente qué órdenes ya se tocaron
+    final Set<int> ordenesClickeadas = {};
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        // StatefulBuilder permite actualizar la UI DENTRO del diálogo sin recargar toda la pantalla
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text('¡Pedido Dividido!', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 250, // Un poco más de altura para comodidad
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Se generaron órdenes separadas por vendedor. Por favor paga cada una:',
+                      style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 15),
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: false,
+                        itemCount: ordenIds.length,
+                        itemBuilder: (ctx, i) {
+                          final int idOrden = ordenIds[i];
+                          final bool yaClickeado = ordenesClickeadas.contains(idOrden);
+
+                          return Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 5),
+                            child: ListTile(
+                              leading: const Icon(Icons.receipt_long, color: Colors.blue),
+                              title: Text('Orden #$idOrden', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  //Verde si es nuevo, Gris si ya se clickeó
+                                  backgroundColor: yaClickeado ? Colors.grey : Colors.green,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                                onPressed: () {
+                                  // Actualizamos el estado DEL DIÁLOGO
+                                  setStateDialog(() {
+                                    ordenesClickeadas.add(idOrden);
+                                  });
+
+                                  // Ejecutamos la lógica de pago original
+                                  _pagarOrdenIndividual(context, idOrden);
+                                },
+                                child: Text(
+                                  yaClickeado ? 'Ver' : 'Pagar',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cerrar', style: TextStyle(color: Colors.grey)),
+                )
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _launchMPCheckout(BuildContext context, String url) async {
@@ -198,7 +302,7 @@ class _CartScreenState extends State<CartScreen> {
               borderRadius: BorderRadius.circular(20),
               child: item.producto.urlImagen != null
                   ? CachedNetworkImage(
-                imageUrl: Ambiente.urlServer + item.producto.urlImagen!,
+                imageUrl: Ambiente.getUrlImagen(item.producto.urlImagen),
                 fit: BoxFit.cover,
                 errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
               )

@@ -121,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   ImageProvider? _getImagenProvider() {
     if (_nuevaFoto != null) return FileImage(_nuevaFoto!);
-    if (_perfilData?['url_foto'] != null) return CachedNetworkImageProvider(Ambiente.urlServer + _perfilData!['url_foto']);
+    if (_perfilData?['url_foto'] != null) return CachedNetworkImageProvider(Ambiente.getUrlImagen(_perfilData!['url_foto']));
     return null;
   }
 

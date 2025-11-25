@@ -175,6 +175,36 @@ class AuthService {
       throw Exception(errorBody['message'] ?? 'Error al enviar el enlace.');
     }
   }
+  //Cambiar Contraseña con Código 
+  Future<void> resetPassword({
+    required String email,
+    required String codigo,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final url = Uri.parse('${Ambiente.urlServer}/api/reset-password');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'codigo': codigo,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return; // Éxito
+    } else {
+      final errorBody = jsonDecode(response.body);
+      throw Exception(errorBody['message'] ?? 'Error al restablecer contraseña');
+    }
+  }
 }
 
 

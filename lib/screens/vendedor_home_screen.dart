@@ -226,7 +226,8 @@ class _VendedorHomeScreenState extends State<VendedorHomeScreen> {
                   borderRadius: BorderRadius.circular(15),
                   child: producto.urlImagen != null
                       ? CachedNetworkImage(
-                    imageUrl: Ambiente.urlServer + producto.urlImagen!,
+                    imageUrl: Ambiente.getUrlImagen(producto.urlImagen),
+
                     fit: BoxFit.cover,
                     errorWidget: (context, url, error) => const Icon(Icons.image_not_supported, color: Colors.white54),
                   )

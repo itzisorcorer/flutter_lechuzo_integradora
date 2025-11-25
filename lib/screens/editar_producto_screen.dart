@@ -262,7 +262,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
     if (_imagenUrlExistente != null) {
       return CachedNetworkImage(
-        imageUrl: Ambiente.urlServer + _imagenUrlExistente!,
+        imageUrl: Ambiente.getUrlImagen(_imagenUrlExistente),
         fit: BoxFit.cover,
         placeholder: (c, u) => const CircularProgressIndicator(),
         errorWidget: (c, u, e) => const Icon(Icons.broken_image, color: Colors.grey),

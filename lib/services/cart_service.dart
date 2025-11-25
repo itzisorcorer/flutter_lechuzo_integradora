@@ -71,74 +71,81 @@ class CartService extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
-  //función checkout para pagar
-  Future<String> checkout() async{
+//Devuelve una Lista de Enteros (IDs de las órdenes creadas)
+  Future<List<int>> checkout() async {
     final token = Ambiente.token;
-    if(token.isEmpty){
-      throw Exception('No estas autenticado. Error.');
-    }
-    if(_items.isEmpty){
-      throw Exception('El carrito esta vacío.');
-    }
+    if (token.isEmpty) throw Exception('No estas autenticado. Error.');
+    if (_items.isEmpty) throw Exception('El carrito esta vacío.');
 
     _isLoading = true;
     notifyListeners();
 
-    try{
-      //Convertimos el carrito al JSON que espera Laravel
-      final List<Map<String, dynamic>> itemsJson = _items.map((item){
+    try {
+      final List<Map<String, dynamic>> itemsJson = _items.map((item) {
         return {
           'producto_id': item.producto.id,
           'cantidad': item.cantidad,
         };
       }).toList();
 
-      final bodyCheckout = {
-        'items': itemsJson,
-      };
+      final bodyCheckout = {'items': itemsJson};
 
-      //Llamamos a /api/checkout
       final urlCheckout = Uri.parse('${Ambiente.urlServer}/api/checkout');
       final responseCheckout = await http.post(
         urlCheckout,
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
-          'Accept' : 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode(bodyCheckout),
       );
 
-      print('Respuesta de Checkout: ${responseCheckout.statusCode}');
-      print('Cuerpo: ${responseCheckout.body}');
-
-      // 2. Verificamos si la creación de la orden fue exitosa
-      if(responseCheckout.statusCode != 201) {
-        // Si falló, lanzamos el error y paramos
+      if (responseCheckout.statusCode != 201) {
         final errorBody = jsonDecode(responseCheckout.body);
         throw Exception(errorBody['message'] ?? 'Error al crear el pedido');
       }
-      //si es 201...
+
       final dataCheckout = jsonDecode(responseCheckout.body);
+      // Obtenemos TODOS los IDs, no solo el primero
       final List<int> ordenIds = List<int>.from(dataCheckout['orden_ids']);
 
-      if(ordenIds.isEmpty){
+      if (ordenIds.isEmpty) {
         throw Exception('El backend no devolvió IDs de orden');
       }
 
-      // 4. Creamos la preferencia MP (solo para la primera orden)
-      final primerOrdenId = ordenIds.first;
-      final initPoint = await _crearPreferenciaMP(primerOrdenId, token);
-
-
-      vaciarCarrito(); // Esto llama a notifyListeners()
-      return initPoint;
-
-    }catch(e){
+      // Vaciamos el carrito local porque las órdenes ya existen en BD
+      vaciarCarrito();
 
       _isLoading = false;
       notifyListeners();
-      throw e;
+
+      return ordenIds; // Retornamos la lista para que la Pantalla decida qué hacer
+
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<String> obtenerLinkDePago(int ordenId) async {
+    final token = Ambiente.token;
+    final urlPago = Uri.parse('${Ambiente.urlServer}/api/pagos/crear-preferencia/$ordenId');
+
+    final responsePago = await http.post(
+      urlPago,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (responsePago.statusCode == 201) {
+      final dataPago = jsonDecode(responsePago.body);
+      return dataPago['init_point'];
+    } else {
+      throw Exception('Error al generar el pago para la orden #$ordenId');
     }
   }
 

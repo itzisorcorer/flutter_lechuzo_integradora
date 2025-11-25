@@ -164,7 +164,8 @@ class _VendedorProfileScreenState extends State<VendedorProfileScreen> {
     }
     if (_perfilData?['url_foto'] != null) {
       // Concatenamos la URL del servidor
-      return CachedNetworkImageProvider(Ambiente.urlServer + _perfilData!['url_foto']);
+      return CachedNetworkImageProvider(
+          Ambiente.getUrlImagen(_perfilData!['url_foto']));
     }
     return null;
   }

@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(15),
                   child: producto.urlImagen != null
                       ? CachedNetworkImage(
-                    imageUrl: Ambiente.urlServer + producto.urlImagen!,
+                    imageUrl: Ambiente.getUrlImagen(producto.urlImagen),
                     fit: BoxFit.cover,
                     placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                     errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
