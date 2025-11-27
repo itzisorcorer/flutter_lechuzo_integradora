@@ -7,6 +7,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../services/chat_service.dart';
+import '../utils/custom_transitions.dart';
+import 'chat_screen.dart';
+
 class ProductoDetalleScreen extends StatefulWidget {
   final ProductoModel producto;
 
@@ -58,6 +62,31 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
     );
     Navigator.pop(context); // Regresar a la tienda
   }
+  Future<void> _contactarVendedor() async {
+    // Mostramos loading
+    showDialog(context: context, builder: (c) => const Center(child: CircularProgressIndicator()));
+
+    try {
+      final chatService = ChatService();
+      // Iniciamos el chat con el vendedor de este producto
+      final chatId = await chatService.iniciarChat(vendedorId: widget.producto.vendedor.id);
+
+      if (mounted) {
+        Navigator.pop(context); // Cerrar loading
+        // Navegar al chat
+        Navigator.push(
+            context,
+            Transiciones.crearRutaSlide(
+                ChatScreen(chatId: chatId, nombreOtroUsuario: widget.producto.vendedor.nombreTienda)
+            )
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error al contactar")));
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -72,12 +101,6 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {},
-          )
-        ],
       ),
       body: SizedBox(
         height: size.height,
@@ -97,7 +120,7 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                     topRight: Radius.circular(40),
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(24, 70, 24, 24), // Padding top grande para la imagen
+                padding: const EdgeInsets.fromLTRB(24, 90, 24, 60), // Padding top grande para la imagen
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -178,6 +201,21 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                     ),
 
                     const SizedBox(height: 20),
+                    // --- ✅ BOTÓN DE CONTACTAR (NUEVO) ---
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        onPressed: _contactarVendedor,
+                        icon: Icon(Icons.chat_bubble_outline, size: 18, color: _colPrimario),
+                        label: Text("Contactar ahora", style: GoogleFonts.poppins(color: _colPrimario, fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: _colPrimario.withOpacity(0.3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
 
                     // --- ZONA DE ACCIÓN INFERIOR ---
                     Row(

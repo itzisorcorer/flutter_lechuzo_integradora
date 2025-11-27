@@ -5,6 +5,7 @@ import 'package:flutter_lechuzo_integradora/Modelos/ProductoModel.dart';
 import 'package:flutter_lechuzo_integradora/services/producto_services.dart';
 import 'package:flutter_lechuzo_integradora/screens/producto_detalle_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_lechuzo_integradora/utils/custom_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,19 +22,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- ESTADO ---
   List<ProductoModel> _allProducts = [];
   List<ProductoModel> _filteredProducts = [];
-  List<CategoriaModel> _categorias = []; // Lista de categorías
+  List<CategoriaModel> _categorias = [];
 
   bool _isLoading = true;
   String? _errorMessage;
 
   // Filtro actual
-  int? _selectedCategoriaId; // null = mostrar todo
+  int? _selectedCategoriaId;
 
-  // --- COLORES DE LA PALETA ---
-  final Color _colFondo = const Color(0xFFFEF8D8); // Crema suave (Fondo)
-  final Color _colPrimario = const Color(0xFF032C42); // Azul muy oscuro (Textos/Iconos)
-  final Color _colAcento = const Color(0xFF24799E); // Azul medio (Botones/Chips)
-  final Color _colCard = Colors.white; // Tarjetas blancas
+  // --- COLORES ---
+  final Color _colFondo = const Color(0xFFFEF8D8);
+  final Color _colPrimario = const Color(0xFF032C42);
+  final Color _colAcento = const Color(0xFF24799E);
+  final Color _colCard = Colors.white;
 
   @override
   void initState() {
@@ -49,10 +50,18 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // ✅ MODIFICADO: Lógica de carga inteligente
   Future<void> _cargarDatosIniciales() async {
-    setState(() { _isLoading = true; });
+    // Si la lista está vacía (primera vez), mostramos el loading grande.
+    // Si ya tiene datos (es un refresh), NO mostramos el loading grande para que no parpadee.
+    if (_allProducts.isEmpty) {
+      setState(() { _isLoading = true; });
+    }
+
+    // Limpiamos errores previos al recargar
+    if (mounted) setState(() { _errorMessage = null; });
+
     try {
-      // Cargamos productos y categorías en paralelo para ser más rápidos
       final results = await Future.wait([
         _productoService.getProductos(),
         _productoService.getCategorias(),
@@ -68,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _categorias = categoriasResp;
           _isLoading = false;
         });
+        _filterProducts(); // Re-aplicar filtros si había texto escrito
       }
     } catch(e) {
       if (mounted) {
@@ -79,42 +89,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Lógica de filtrado (Buscador + Categoría)
   void _filterProducts() {
     final query = _searchController.text.toLowerCase();
 
     setState(() {
       _filteredProducts = _allProducts.where((producto) {
-        // 1. Filtro de Texto
         final nombreMatch = producto.nombre.toLowerCase().contains(query);
         final vendedorMatch = producto.vendedor.nombreTienda.toLowerCase().contains(query);
         final textMatch = nombreMatch || vendedorMatch;
-
-        // 2. Filtro de Categoría
         final catMatch = _selectedCategoriaId == null || producto.categoria.id == _selectedCategoriaId;
-
         return textMatch && catMatch;
       }).toList();
     });
   }
 
-  // Función para seleccionar/deseleccionar categoría
   void _toggleCategoria(int id) {
     setState(() {
       if (_selectedCategoriaId == id) {
-        _selectedCategoriaId = null; // Deseleccionar
+        _selectedCategoriaId = null;
       } else {
-        _selectedCategoriaId = id; // Seleccionar
+        _selectedCategoriaId = id;
       }
-      _filterProducts(); // Re-aplicar filtros
+      _filterProducts();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _colFondo, // Fondo Crema
-      body: SafeArea( // Evita que se meta en la barra de notificaciones
+      backgroundColor: _colFondo,
+      body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -134,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  // (El carrito ya está en el BottomBar, así que aquí podemos poner un Avatar o nada)
                   CircleAvatar(
                     backgroundColor: _colAcento.withOpacity(0.2),
                     child: Icon(Icons.person, color: _colAcento),
@@ -165,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // --- 3. CATEGORÍAS (CHIPS) ---
+            // --- 3. CATEGORÍAS ---
             SizedBox(
               height: 50,
               child: ListView.builder(
@@ -200,27 +203,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 10),
 
-            // --- 4. GRID DE PRODUCTOS ---
+            // --- 4. GRID DE PRODUCTOS (CON REFRESH) ---
             Expanded(
-              child: _isLoading
+              child: _isLoading && _allProducts.isEmpty
                   ? const Center(child: CircularProgressIndicator())
-                  : _errorMessage != null
-                  ? Center(child: Text('Error: $_errorMessage'))
-                  : _filteredProducts.isEmpty
-                  ? const Center(child: Text('No se encontraron productos 😢'))
-                  : GridView.builder(
-                padding: const EdgeInsets.all(24),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 2 columnas
-                  childAspectRatio: 0.75, // Relación de aspecto (más alto que ancho)
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: _filteredProducts.length,
-                itemBuilder: (context, index) {
-                  final producto = _filteredProducts[index];
-                  return _buildProductCard(producto);
-                },
+                  : RefreshIndicator( // ✅ AQUI ESTÁ LA MAGIA
+                onRefresh: _cargarDatosIniciales, // Llama a la función al deslizar
+                color: _colAcento,
+                backgroundColor: Colors.white,
+                child: _buildGridContent(), // Extraje la lógica para mantenerlo limpio
               ),
             ),
           ],
@@ -229,13 +220,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- WIDGET DE TARJETA DE PRODUCTO ---
+  // Widget auxiliar para manejar el contenido del RefreshIndicator
+  Widget _buildGridContent() {
+    if (_errorMessage != null) {
+      // ✅ TRUCO: SingleChildScrollView + AlwaysScrollableScrollPhysics
+      // Permite hacer pull-to-refresh aunque haya error y la lista no exista
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 50, color: Colors.red),
+                const SizedBox(height: 10),
+                Text('Error de conexión', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                Text('Desliza para reintentar', style: GoogleFonts.poppins(color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_filteredProducts.isEmpty) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 50, color: Colors.grey[400]),
+                const SizedBox(height: 10),
+                Text('No se encontraron productos', style: GoogleFonts.poppins(color: Colors.grey[600])),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(24),
+      // Importante: AlwaysScrollableScrollPhysics asegura que el refresh funcione aunque haya pocos items
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: _filteredProducts.length,
+      itemBuilder: (context, index) {
+        final producto = _filteredProducts[index];
+        return _buildProductCard(producto);
+      },
+    );
+  }
+
   Widget _buildProductCard(ProductoModel producto) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ProductoDetalleScreen(producto: producto)),
+          Transiciones.crearRutaFadeUp(ProductoDetalleScreen(producto: producto)),
         );
       },
       child: Container(
@@ -251,19 +302,22 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(8), // Un poco de margen
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50], // Fondo grisecito detrás de la foto
+                  color: Colors.grey[50],
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(15),
                   child: producto.urlImagen != null
-                      ? CachedNetworkImage(
-                    imageUrl: Ambiente.getUrlImagen(producto.urlImagen),
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                      ? Hero(
+                    tag: 'producto-${producto.id}',
+                    child: CachedNetworkImage(
+                      imageUrl: Ambiente.getUrlImagen(producto.urlImagen),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
                   )
                       : const Icon(Icons.inventory_2, size: 50, color: Colors.grey),
                 ),
@@ -297,7 +351,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         '\$${producto.precio.toStringAsFixed(0)}',
                         style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: _colAcento),
                       ),
-                      // Botoncito de + visual
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(color: _colAcento, shape: BoxShape.circle),

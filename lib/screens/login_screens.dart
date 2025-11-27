@@ -7,6 +7,7 @@ import 'package:flutter_lechuzo_integradora/screens/vendedor_main_screen.dart';
 import 'package:flutter_lechuzo_integradora/services/auth_services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_lechuzo_integradora/screens/forgot_password_screen.dart';
+import 'package:flutter_lechuzo_integradora/utils/custom_transitions.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,10 +52,18 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (mounted) {
+        // ✅ ANIMACIÓN DE ENTRADA (FadeUp)
+        // Usamos FadeUp para que se sienta que "entras" a la aplicación
         if (Ambiente.rol == 'vendedor' || Ambiente.rol == 'modulo') {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const VendedorMainScreen()));
+          Navigator.pushReplacement(
+              context,
+              Transiciones.crearRutaFadeUp(const VendedorMainScreen())
+          );
         } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const EstudianteMainScreen()));
+          Navigator.pushReplacement(
+              context,
+              Transiciones.crearRutaFadeUp(const EstudianteMainScreen())
+          );
         }
       }
     } catch (e) {
@@ -73,7 +82,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // Usamos SingleChildScrollView al inicio para evitar problemas con el teclado
       body: SingleChildScrollView(
         child: SizedBox(
           height: size.height,
@@ -96,11 +104,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
+                        // Asegúrate de tener esta imagen o un Icono de fallback
                         Image.asset(
                           'assets/logoIntegradora.png',
-                          height: 250, // Ajusta la altura a tu gusto
+                          height: 250,
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.storefront, size: 100, color: Colors.white54),
                         ),
                       ],
                     ),
@@ -123,17 +133,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       topRight: Radius.circular(40),
                     ),
                     boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 20,
-                        offset: Offset(0, -5),
-                      ),
+                      BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -5)),
                     ],
                   ),
-                  // --- ¡CORRECCIÓN AQUÍ! ---
-                  // Envolvemos la columna en un SingleChildScrollView para que no desborde
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 40), // Movemos el padding vertical aquí
+                    padding: EdgeInsets.only(top: 40, left: 0, right: 0, bottom: 20 + MediaQuery.of(context).viewPadding.bottom),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -148,10 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 5),
                         Text(
                           "Inicia sesión para continuar",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
                         ),
                         const SizedBox(height: 30),
 
@@ -175,9 +176,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
+                              // ✅ ANIMACIÓN LATERAL (Slide)
+                              // Para navegar a pantallas secundarias usamos Slide
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                                Transiciones.crearRutaSlide(const ForgotPasswordScreen()),
                               );
                             },
                             child: Text(
@@ -204,16 +207,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Text(
                               "ENTRAR",
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
+                              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 20), // Un poco de espacio antes del final
+                        const SizedBox(height: 20),
 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -221,7 +220,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             Text("¿No tienes cuenta?", style: GoogleFonts.poppins(color: Colors.grey[600])),
                             TextButton(
                               onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                                // ✅ ANIMACIÓN LATERAL (Slide)
+                                Navigator.push(
+                                    context,
+                                    Transiciones.crearRutaSlide(const RegisterScreen())
+                                );
                               },
                               child: Text("Regístrate aquí", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: _colorSecundario)),
                             ),

@@ -15,19 +15,34 @@ class MisPedidosScreen extends StatefulWidget {
 
 class _MisPedidosScreenState extends State<MisPedidosScreen> {
   final OrdenService _ordenService = OrdenService();
+
+  // Variable para almacenar el futuro y refrescarlo
   late Future<List<OrdenModel>> _ordenesFuture;
 
   // --- PALETA ESTUDIANTE ---
-  final Color _colFondo = const Color(0xFFFEF8D8); // Crema (Fondo Pantalla)
-  final Color _colCard = Colors.white; // Blanco (Tarjetas)
-  final Color _colPrimario = const Color(0xFF032C42); // Azul Oscuro (Textos)
+  final Color _colFondo = const Color(0xFFFEF8D8); // Crema
+  final Color _colCard = Colors.white; // Blanco
+  final Color _colPrimario = const Color(0xFF032C42); // Azul Oscuro
   final Color _colSecundario = const Color(0xFF175554); // Verde Oscuro
   final Color _colAcento = const Color(0xFF24799E); // Azul Medio
 
   @override
   void initState() {
     super.initState();
-    _ordenesFuture = _ordenService.getMisOrdenes().then((response) => response.ordenes);
+    _cargarOrdenes();
+  }
+
+  // Función para cargar/recargar
+  Future<void> _cargarOrdenes() async {
+    setState(() {
+      _ordenesFuture = _ordenService.getMisOrdenes().then((response) => response.ordenes);
+    });
+    // Esperamos para que el indicador de carga se quite cuando termine
+    try {
+      await _ordenesFuture;
+    } catch (e) {
+      // El error se maneja en el builder
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -36,6 +51,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
       case 'cancelado': return Colors.red;
       case 'en_progreso': return Colors.blue;
       case 'listo': return Colors.teal;
+      case 'confirmado': return Colors.green[700]!; // Nuevo estado de pago
       default: return Colors.orange; // pendiente
     }
   }
@@ -43,7 +59,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _colFondo, // Fondo Crema
+      backgroundColor: _colFondo,
       appBar: AppBar(
         title: Text('Mis Pedidos', style: GoogleFonts.poppins(color: _colPrimario, fontWeight: FontWeight.bold)),
         backgroundColor: _colFondo,
@@ -54,36 +70,76 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
       body: FutureBuilder<List<OrdenModel>>(
         future: _ordenesFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          // Si es la carga inicial
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error.toString().replaceFirst("Exception: ", "")}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_bag_outlined, size: 80, color: _colAcento.withOpacity(0.5)),
-                  const SizedBox(height: 10),
-                  Text('No has realizado pedidos', style: GoogleFonts.poppins(color: Colors.grey)),
-                ],
-              ),
-            );
-          }
 
-          final ordenes = snapshot.data!;
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: ordenes.length,
-            itemBuilder: (context, index) {
-              return _buildOrdenAcordeon(ordenes[index]);
-            },
+          // Envolvemos el contenido en el RefreshIndicator
+          return RefreshIndicator(
+            onRefresh: _cargarOrdenes,
+            color: _colAcento,
+            child: _buildListContent(snapshot),
           );
         },
       ),
+    );
+  }
+
+  // Widget auxiliar para manejar estados (Vacío, Error, Lista)
+  Widget _buildListContent(AsyncSnapshot<List<OrdenModel>> snapshot) {
+    // 1. Error
+    if (snapshot.hasError) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(), // Vital para el pull-to-refresh
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 50, color: Colors.red),
+                const SizedBox(height: 10),
+                Text('Error al cargar pedidos', style: GoogleFonts.poppins(color: Colors.red)),
+                Text('Desliza para reintentar', style: GoogleFonts.poppins(color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. Vacío
+    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(), // Vital para el pull-to-refresh
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 80, color: _colAcento.withOpacity(0.5)),
+                const SizedBox(height: 10),
+                Text('No has realizado pedidos', style: GoogleFonts.poppins(color: Colors.grey)),
+                Text('Desliza para actualizar', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 3. Lista con Datos
+    final ordenes = snapshot.data!;
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      // Importante para que el scroll funcione suave con el refresh
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: ordenes.length,
+      itemBuilder: (context, index) {
+        return _buildOrdenAcordeon(ordenes[index]);
+      },
     );
   }
 
@@ -94,17 +150,16 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.white, width: 1), // Borde sutil
+        side: const BorderSide(color: Colors.white, width: 1),
       ),
-      color: _colCard, // Tarjeta Blanca
+      color: _colCard,
       child: Theme(
-        // Quitamos las líneas divisorias del ExpansionTile
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.all(16),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
 
-          // --- CABECERA (Siempre visible) ---
+          // CABECERA
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -133,7 +188,6 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
             children: [
               const SizedBox(height: 4),
               Text(
-                // Aquí mostramos el VENDEDOR
                 'Vendedor: ${orden.vendedor?.nombreTienda ?? "Desconocido"}',
                 style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 13),
               ),
@@ -144,7 +198,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
             ],
           ),
 
-          // --- DETALLES (Al expandir) ---
+          // DETALLES
           children: [
             const Divider(color: Colors.black12),
             const SizedBox(height: 8),
@@ -154,12 +208,12 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Lista de productos de la orden
+            // Lista de productos
             ...orden.itemsOrdenes.map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: Row(
                 children: [
-                  // Foto pequeña
+                  // Foto
                   Container(
                     width: 45,
                     height: 45,
@@ -201,7 +255,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),

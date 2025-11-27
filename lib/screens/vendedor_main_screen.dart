@@ -1,5 +1,6 @@
 // lib/screens/vendedor_main_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_lechuzo_integradora/screens/inbox_screen.dart';
 // Importamos las 3 pantallas que usará
 import 'package:flutter_lechuzo_integradora/screens/vendedor_home_screen.dart'; // ¡Tu pantalla actual!
 import 'package:flutter_lechuzo_integradora/screens/ventas_screen.dart';
@@ -19,7 +20,8 @@ class _VendedorMainScreenState extends State<VendedorMainScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     VendedorHomeScreen(), // <-- Tu pantalla de "Mis Productos" (Índice 0)
     VentasScreen(), // <-- La nueva pantalla de Ventas (Índice 1)
-    VendedorProfileScreen(), // <-- La nueva pantalla de Perfil (Índice 2)
+    InboxScreen(), // indice 3
+    VendedorProfileScreen(), // <-- La nueva pantalla de Perfil (Índice 3)
   ];
 
   void _onItemTapped(int index) {
@@ -42,14 +44,23 @@ class _VendedorMainScreenState extends State<VendedorMainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2),
             label: 'Mis Productos',
+              backgroundColor: Colors.black
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),
             label: 'Ventas',
+              backgroundColor: Colors.black
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.storefront),
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Mensajes',
+              backgroundColor: Colors.black
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.storefront
+            ),
             label: 'Perfil',
+            backgroundColor: Colors.black,
           ),
         ],
         currentIndex: _selectedIndex,

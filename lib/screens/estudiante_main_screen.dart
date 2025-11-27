@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lechuzo_integradora/screens/cart_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/home_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/mis_pedidos_screen.dart';
+import 'package:flutter_lechuzo_integradora/screens/inbox_screen.dart';
 import 'package:flutter_lechuzo_integradora/screens/profile_screen.dart';
 
 class EstudianteMainScreen extends StatefulWidget {
@@ -20,7 +21,8 @@ class _EstudianteMainScreenState extends State<EstudianteMainScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(), // <-- Tu pantalla con buscador (Índice 0)
     CartScreen(), // <-- La nueva pantalla de carrito (Índice 1)
-    ProfileScreen(), // <-- La nueva pantalla de perfil (Índice 2)
+    InboxScreen(), // <-- La nueva pantalla de inbox (Índice 2)
+    ProfileScreen(), // <-- La nueva pantalla de perfil (Índice 3)
   ];
 
   // Función que se llama cuando tocas un ícono
@@ -45,14 +47,22 @@ class _EstudianteMainScreenState extends State<EstudianteMainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.store),
             label: 'Tienda',
+              backgroundColor: Colors.black
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: 'Carrito',
+              backgroundColor: Colors.black
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Mensajes',
+              backgroundColor: Colors.black
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Mi perfil',
+              backgroundColor: Colors.black
           ),
         ],
         currentIndex: _selectedIndex,

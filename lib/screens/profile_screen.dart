@@ -9,6 +9,7 @@ import 'package:flutter_lechuzo_integradora/services/estudiante_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_lechuzo_integradora/utils/custom_transitions.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -37,13 +38,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _cargarPerfil() async {
+    // Nota: No ponemos _isLoading = true aquí para que el refresh sea sutil
+    // y no tape toda la pantalla con el loading blanco.
     try {
       final data = await _estudianteService.getPerfil();
       if (mounted) {
         setState(() {
           _perfilData = data;
           _nuevaFoto = null;
-          _isLoading = false;
+          _isLoading = false; // Solo afecta la primera carga
           Ambiente.nombreUsuario = data['nombre_completo'];
         });
       }
@@ -56,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() { _nuevaFoto = File(pickedFile.path); });
-      _mostrarDialogoEditar(); // Confirmar subida
+      _mostrarDialogoEditar();
     }
   }
 
@@ -128,16 +131,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     final authService = AuthService();
     try { await authService.logout(); } catch (e) {}
+
     Ambiente.token = '';
     Ambiente.idUsuario = 0;
+    Ambiente.rol = '';
+    Ambiente.nombreUsuario = '';
+
     if (mounted) {
-      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
+      Navigator.pushAndRemoveUntil(
+          context,
+          Transiciones.crearRutaFadeUp(const LoginScreen()),
+              (route) => false
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // Loading inicial completo
+    if (_isLoading && _perfilData == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -150,53 +164,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(icon: Icon(Icons.edit, color: _colPrimario), onPressed: _mostrarDialogoEditar)
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-            Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey[200]!, width: 4)),
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: const Color(0xFFFEF8D8),
-                    backgroundImage: _getImagenProvider(),
-                    child: _getImagenProvider() == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
-                  ),
-                ),
-                Positioned(
-                  bottom: 0, right: 0,
-                  child: InkWell(
-                    onTap: _seleccionarFoto,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: _colSecundario, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                      child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+      // ✅ AQUÍ AGREGAMOS EL REFRESH INDICATOR
+      body: RefreshIndicator(
+        onRefresh: _cargarPerfil, // Llama a la función para recargar datos
+        color: _colSecundario,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(), // Vital para que funcione el pull aunque el contenido sea corto
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey[200]!, width: 4)),
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: const Color(0xFFFEF8D8),
+                      backgroundImage: _getImagenProvider(),
+                      child: _getImagenProvider() == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _perfilData?['nombre_completo']?.toUpperCase() ?? "ESTUDIANTE",
-              style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: _colPrimario),
-            ),
-            Text(
-              "Matrícula: ${_perfilData?['matricula'] ?? '---'}",
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: InkWell(
+                      onTap: _seleccionarFoto,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: _colSecundario, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _perfilData?['nombre_completo']?.toUpperCase() ?? "ESTUDIANTE",
+                style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: _colPrimario),
+              ),
+              Text(
+                "Matrícula: ${_perfilData?['matricula'] ?? '---'}",
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 40),
 
-            // Opciones
-            _buildOption("MIS PEDIDOS", "Historial de compras", Icons.shopping_bag_outlined, () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPedidosScreen()));
-            }),
-            const Divider(height: 40),
-            _buildOption("CERRAR SESIÓN", "Salir de la cuenta", Icons.logout, _logout, isDestructive: true),
-          ],
+              // Opciones
+              _buildOption("MIS PEDIDOS", "Historial de compras", Icons.shopping_bag_outlined, () {
+                Navigator.push(context, Transiciones.crearRutaSlide(const MisPedidosScreen()));
+              }),
+              const Divider(height: 40),
+              _buildOption("CERRAR SESIÓN", "Salir de la cuenta", Icons.logout, _logout, isDestructive: true),
+
+              // Espacio extra abajo para que el scroll siempre tenga juego
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
     );
